@@ -1,33 +1,23 @@
-﻿Function CreateUpdate-AzLogAnalyticsCustomLogTableDcr ($TableName, $SchemaSourceObject, $AzLogWorkspaceResourceId, $AzAppId, $AzAppSecret, $TenantId)
+﻿Function Get-AzAccessTokenManagement
 {
+    [CmdletBinding()]
+    param(
+            [Parameter()]
+                [string]$AzAppId,
+            [Parameter()]
+                [string]$AzAppSecret,
+            [Parameter()]
+                [string]$TenantId
+         )
 
-        <#  TESTING !!
-
-            $AzLogWorkspaceResourceId = $global:MainLogAnalyticsWorkspaceResourceId
-            $SchemaSourceObject       = $DataVariable[0]
-            $TableName                = $TableName
-
-
-            # ClientInspector
-            $AzLogWorkspaceResourceId = $LogAnalyticsWorkspaceResourceId
-            $SchemaSourceObject       = $Schema
-            $TableName                = $TableName 
-            $AzAppId                  = $LogIngestAppId
-            $AzAppSecret              = $LogIngestAppSecret
-            $TenantId                 = $TenantId
-        #>
-
-    #--------------------------------------------------------------------------
-    # Connection
-    #--------------------------------------------------------------------------
         If ( ($AzAppId) -and ($AzAppSecret) -and ($TenantId) )
             {
                 $AccessTokenUri = 'https://management.azure.com/'
                 $oAuthUri       = "https://login.microsoftonline.com/$($TenantId)/oauth2/token"
                 $authBody       = [Ordered] @{
                                                resource = "$AccessTokenUri"
-                                               client_id = "$($LogIngestAppId)"
-                                               client_secret = "$($LogIngestAppSecret)"
+                                               client_id = "$($AzAppId)"
+                                               client_secret = "$($AzAppSecret)"
                                                grant_type = 'client_credentials'
                                              }
                 $authResponse = Invoke-RestMethod -Method Post -Uri $oAuthUri -Body $authBody -ErrorAction Stop
@@ -51,6 +41,36 @@
                                 'Authorization' = "Bearer $token"
                            }
             }
+
+    Return $Headers
+}
+
+# Function CreateUpdate-AzLogAnalyticsCustomLogTableDcr ($TableName, $SchemaSourceObject, $AzLogWorkspaceResourceId, $AzAppId, $AzAppSecret, $TenantId)
+
+Function CreateUpdate-AzLogAnalyticsCustomLogTableDcr
+{
+    [CmdletBinding()]
+    param(
+            [Parameter(mandatory)]
+                [string]$TableName,
+            [Parameter(mandatory)]
+                [array]$SchemaSourceObject,
+            [Parameter(mandatory)]
+                [string]$AzLogWorkspaceResourceId,
+            [Parameter()]
+                [string]$AzAppId,
+            [Parameter()]
+                [string]$AzAppSecret,
+            [Parameter()]
+                [string]$TenantId
+         )
+
+    #--------------------------------------------------------------------------
+    # Connection
+    #--------------------------------------------------------------------------
+        $Headers = Get-AzAccessTokenManagement -AzAppId $AzAppId `
+                                               -AzAppSecret $AzAppSecret `
+                                               -TenantId $TenantId
 
     #--------------------------------------------------------------------------
     # LogAnalytics Table check
@@ -127,75 +147,44 @@
         return
 }
 
+<#
+    Function CreateUpdate-AzDataCollectionRuleLogIngestCustomLog ($SchemaSourceObject, $AzLogWorkspaceResourceId, $DceName, $DcrName, $TableName, $TablePrefix, $AzDcrSetLogIngestApiAppPermissionsDcrLevel, `
+                                                                  $LogIngestServicePricipleObjectId, $AzAppId, $AzAppSecret, $TenantId)
+#>
 
-Function CreateUpdate-AzDataCollectionRuleLogIngestCustomLog ($SchemaSourceObject, $AzLogWorkspaceResourceId, $DceName, $DcrName, $TableName, $TablePrefix, $AzDcrSetLogIngestApiAppPermissionsDcrLevel, `
-                                                              $LogIngestServicePricipleObjectId, $AzAppId, $AzAppSecret, $TenantId)
+Function CreateUpdate-AzDataCollectionRuleLogIngestCustomLog
 {
 
-<#   TROUBLESHOOTING
-
-        # Function variables
-        $AzLogWorkspaceResourceId                   = $global:MainLogAnalyticsWorkspaceResourceId
-        
-        # $DceName                                    = $Global:AzDceNameSrvNetworkCloud
-
-        $SchemaSourceObject                         = $DataVariable[0]
-
-        # $TablePrefix                                = $Global:AzDcrPrefixSrvNetworkCloud
-        $TablePrefix                                = $AzDcrPrefixClient
-
-        $LogIngestServicePricipleObjectId           = $Global:AzDcrLogIngestServicePrincipalObjectId
-        $AzDcrSetLogIngestApiAppPermissionsDcrLevel = $Global:AzDcrSetLogIngestApiAppPermissionsDcrLevel
-        $AzAppId                                    = $TableDcrSchemaCreateUpdateAppId
-        $AzAppSecret                                = $TableDcrSchemaCreateUpdateAppSecret
-
-      # ClientInspector testing
-        $AzLogWorkspaceResourceId                   = $LogAnalyticsWorkspaceResourceId
-        $SchemaSourceObject                         = $Schema
-        $LogIngestServicePricipleObjectId           = $AzDcrLogIngestServicePrincipalObjectId
-        $AzDcrSetLogIngestApiAppPermissionsDcrLevel = $AzDcrSetLogIngestApiAppPermissionsDcrLevel
-        $TablePrefix                                = $AzDcrPrefixClient
-
-        $AzAppId                                    = $LogIngestAppId
-        $AzAppSecret                                = $LogIngestAppSecret
-        # $DceName 
-        # $TenantId
-#>
+    [CmdletBinding()]
+    param(
+            [Parameter(mandatory)]
+                [array]$SchemaSourceObject,
+            [Parameter(mandatory)]
+                [string]$AzLogWorkspaceResourceId,
+            [Parameter(mandatory)]
+                [string]$DceName,
+            [Parameter(mandatory)]
+                [string]$DcrName,
+            [Parameter(mandatory)]
+                [string]$TableName,
+            [Parameter(mandatory)]
+                [string]$AzDcrSetLogIngestApiAppPermissionsDcrLevel,
+            [Parameter(mandatory)]
+                [string]$LogIngestServicePricipleObjectId,
+            [Parameter()]
+                [string]$AzAppId,
+            [Parameter()]
+                [string]$AzAppSecret,
+            [Parameter()]
+                [string]$TenantId
+         )
 
     #--------------------------------------------------------------------------
     # Connection
     #--------------------------------------------------------------------------
-        If ( ($AzAppId) -and ($AzAppSecret) -and ($TenantId) )
-            {
-                $AccessTokenUri = 'https://management.azure.com/'
-                $oAuthUri       = "https://login.microsoftonline.com/$($TenantId)/oauth2/token"
-                $authBody       = [Ordered] @{
-                                               resource = "$AccessTokenUri"
-                                               client_id = "$($LogIngestAppId)"
-                                               client_secret = "$($LogIngestAppSecret)"
-                                               grant_type = 'client_credentials'
-                                             }
-                $authResponse = Invoke-RestMethod -Method Post -Uri $oAuthUri -Body $authBody -ErrorAction Stop
-                $token = $authResponse.access_token
-
-                # Set the WebRequest headers
-                $Headers = @{
-                                'Content-Type' = 'application/json'
-                                'Accept' = 'application/json'
-                                'Authorization' = "Bearer $token"
-                            }
-            }
-        Else
-            {
-                $AccessToken = Get-AzAccessToken -ResourceUrl https://management.azure.com/
-                $Token = $AccessToken.Token
-
-                $Headers = @{
-                                'Content-Type' = 'application/json'
-                                'Accept' = 'application/json'
-                                'Authorization' = "Bearer $token"
-                           }
-            }
+        $Headers = Get-AzAccessTokenManagement -AzAppId $AzAppId `
+                                               -AzAppSecret $AzAppSecret `
+                                               -TenantId $TenantId
 
     #--------------------------------------------------------------------------
     # Get DCEs from Azure Resource Graph
@@ -282,12 +271,6 @@ Function CreateUpdate-AzDataCollectionRuleLogIngestCustomLog ($SchemaSourceObjec
             }
 
         $DceLocation                                = $DceInfo.location
-
-        # default naming convention, if not specificed
-        If ($Dcrname -eq $null)
-            {
-                $DcrName                            = "dcr-" + $TablePrefix + "-" + $TableName + "_CL"
-            }
 
         $DcrSubscription                            = ($AzLogWorkspaceResourceId -split "/")[2]
         $DcrLogWorkspaceName                        = ($AzLogWorkspaceResourceId -split "/")[-1]
@@ -447,7 +430,7 @@ Function CreateUpdate-AzDataCollectionRuleLogIngestCustomLog ($SchemaSourceObjec
     # updating DCR list using Azure Resource Graph due to new DCR was created
     #--------------------------------------------------------------------------
 
-        $global:AzDcrDetails = Get-AzDcrListAll -AzAppId $LogIngestAppId -AzAppSecret $LogIngestAppSecret -TenantId $TenantId
+        $global:AzDcrDetails = Get-AzDcrListAll -AzAppId $AzAppId -AzAppSecret $AzAppSecret -TenantId $TenantId
 
     #--------------------------------------------------------------------------
     # delegating Monitor Metrics Publisher Rolepermission to Log Ingest App
@@ -505,9 +488,22 @@ Function CreateUpdate-AzDataCollectionRuleLogIngestCustomLog ($SchemaSourceObjec
 
 }
 
+#Function Update-AzDataCollectionRuleResetTransformKqlDefault ($DcrResourceId, $AzAppId, $AzAppSecret, $TenantId)
            
-Function Update-AzDataCollectionRuleResetTransformKqlDefault ($DcrResourceId, $AzAppId, $AzAppSecret, $TenantId)
+Function Update-AzDataCollectionRuleResetTransformKqlDefault
 {
+    [CmdletBinding()]
+    param(
+            [Parameter(mandatory)]
+                [string]$DcrResourceId,
+            [Parameter()]
+                [string]$AzAppId,
+            [Parameter()]
+                [string]$AzAppSecret,
+            [Parameter()]
+                [string]$TenantId
+         )
+
     #--------------------------------------------------------------------------
     # Variables
     #--------------------------------------------------------------------------
@@ -517,37 +513,10 @@ Function Update-AzDataCollectionRuleResetTransformKqlDefault ($DcrResourceId, $A
     #--------------------------------------------------------------------------
     # Connection
     #--------------------------------------------------------------------------
-        If ( ($AzAppId) -and ($AzAppSecret) -and ($TenantId) )
-            {
-                $AccessTokenUri = 'https://management.azure.com/'
-                $oAuthUri       = "https://login.microsoftonline.com/$($TenantId)/oauth2/token"
-                $authBody       = [Ordered] @{
-                                               resource = "$AccessTokenUri"
-                                               client_id = "$($AzAppId)"
-                                               client_secret = "$($AzAppSecret)"
-                                               grant_type = 'client_credentials'
-                                             }
-                $authResponse = Invoke-RestMethod -Method Post -Uri $oAuthUri -Body $authBody -ErrorAction Stop
-                $token = $authResponse.access_token
 
-                # Set the WebRequest headers
-                $Headers = @{
-                                'Content-Type' = 'application/json'
-                                'Accept' = 'application/json'
-                                'Authorization' = "Bearer $token"
-                            }
-            }
-        Else
-            {
-                $AccessToken = Get-AzAccessToken -ResourceUrl https://management.azure.com/
-                $Token = $AccessToken.Token
-
-                $Headers = @{
-                                'Content-Type' = 'application/json'
-                                'Accept' = 'application/json'
-                                'Authorization' = "Bearer $token"
-                           }
-            }
+        $Headers = Get-AzAccessTokenManagement -AzAppId $AzAppId `
+                                               -AzAppSecret $AzAppSecret `
+                                               -TenantId $TenantId
 
     #--------------------------------------------------------------------------
     # get existing DCR
@@ -578,49 +547,32 @@ Function Update-AzDataCollectionRuleResetTransformKqlDefault ($DcrResourceId, $A
         $DCR = Invoke-RestMethod -Uri $DcrUri -Method PUT -Body $DcrPayload -Headers $Headers
 }
 
-Function Update-AzDataCollectionRuleTransformKql ($DcrResourceId, $transformKql, $AzAppId, $AzAppSecret, $TenantId)
+# Function Update-AzDataCollectionRuleTransformKql ($DcrResourceId, $transformKql, $AzAppId, $AzAppSecret, $TenantId)
+
+Function Update-AzDataCollectionRuleTransformKql
 {
 
-<#
+    [CmdletBinding()]
+    param(
+            [Parameter(mandatory)]
+                [string]$DcrResourceId,
+            [Parameter(mandatory)]
+                [string]$transformKql,
+            [Parameter()]
+                [string]$AzAppId,
+            [Parameter()]
+                [string]$AzAppSecret,
+            [Parameter()]
+                [string]$TenantId
+         )
 
-    $DcrResourceId = $DcrRuleId
-    $transformKql  = $transformKql
-
-#>
     #--------------------------------------------------------------------------
     # Connection
     #--------------------------------------------------------------------------
-        If ( ($AzAppId) -and ($AzAppSecret) -and ($TenantId) )
-            {
-                $AccessTokenUri = 'https://management.azure.com/'
-                $oAuthUri       = "https://login.microsoftonline.com/$($TenantId)/oauth2/token"
-                $authBody       = [Ordered] @{
-                                               resource = "$AccessTokenUri"
-                                               client_id = "$($LogIngestAppId)"
-                                               client_secret = "$($LogIngestAppSecret)"
-                                               grant_type = 'client_credentials'
-                                             }
-                $authResponse = Invoke-RestMethod -Method Post -Uri $oAuthUri -Body $authBody -ErrorAction Stop
-                $token = $authResponse.access_token
 
-                # Set the WebRequest headers
-                $Headers = @{
-                                'Content-Type' = 'application/json'
-                                'Accept' = 'application/json'
-                                'Authorization' = "Bearer $token"
-                            }
-            }
-        Else
-            {
-                $AccessToken = Get-AzAccessToken -ResourceUrl https://management.azure.com/
-                $Token = $AccessToken.Token
-
-                $Headers = @{
-                                'Content-Type' = 'application/json'
-                                'Accept' = 'application/json'
-                                'Authorization' = "Bearer $token"
-                           }
-            }
+        $Headers = Get-AzAccessTokenManagement -AzAppId $AzAppId `
+                                               -AzAppSecret $AzAppSecret `
+                                               -TenantId $TenantId
 
     #--------------------------------------------------------------------------
     # get existing DCR
@@ -660,53 +612,35 @@ Function Update-AzDataCollectionRuleTransformKql ($DcrResourceId, $transformKql,
         $DCR = Invoke-RestMethod -Uri $DcrUri -Method PUT -Body $DcrPayload -Headers $Headers
 }
 
+# Function Update-AzDataCollectionRuleLogAnalyticsCustomLogTableSchema ($SchemaSourceObject, $TableName, $DcrResourceId, $AzLogWorkspaceResourceId, $AzAppId, $AzAppSecret, $TenantId)
 
-Function Update-AzDataCollectionRuleLogAnalyticsCustomLogTableSchema ($SchemaSourceObject, $TableName, $DcrResourceId, $AzLogWorkspaceResourceId, $AzAppId, $AzAppSecret, $TenantId)
+Function Update-AzDataCollectionRuleLogAnalyticsCustomLogTableSchema
 {
-
-<#
-
-    $SchemaSourceObject         = $DataVariable[0]
-    $TableName                  = $CreateUpdateAzLACustomLogTable[0]
-    $DcrResourceId              = $DcrResourceId
-    $AzLogWorkspaceResourceId   = $global:MainLogAnalyticsWorkspaceResourceId
-
-#>
+    [CmdletBinding()]
+    param(
+            [Parameter(mandatory)]
+                [hashtable]$SchemaSourceObject,
+            [Parameter(mandatory)]
+                [string]$TableName,
+            [Parameter(mandatory)]
+                [string]$DcrResourceId,
+            [Parameter(mandatory)]
+                [string]$AzLogWorkspaceResourceId,
+            [Parameter()]
+                [string]$AzAppId,
+            [Parameter()]
+                [string]$AzAppSecret,
+            [Parameter()]
+                [string]$TenantId
+         )
 
     #--------------------------------------------------------------------------
     # Connection
     #--------------------------------------------------------------------------
-        If ( ($AzAppId) -and ($AzAppSecret) -and ($TenantId) )
-            {
-                $AccessTokenUri = 'https://management.azure.com/'
-                $oAuthUri       = "https://login.microsoftonline.com/$($TenantId)/oauth2/token"
-                $authBody       = [Ordered] @{
-                                               resource = "$AccessTokenUri"
-                                               client_id = "$($LogIngestAppId)"
-                                               client_secret = "$($LogIngestAppSecret)"
-                                               grant_type = 'client_credentials'
-                                             }
-                $authResponse = Invoke-RestMethod -Method Post -Uri $oAuthUri -Body $authBody -ErrorAction Stop
-                $token = $authResponse.access_token
 
-                # Set the WebRequest headers
-                $Headers = @{
-                                'Content-Type' = 'application/json'
-                                'Accept' = 'application/json'
-                                'Authorization' = "Bearer $token"
-                            }
-            }
-        Else
-            {
-                $AccessToken = Get-AzAccessToken -ResourceUrl https://management.azure.com/
-                $Token = $AccessToken.Token
-
-                $Headers = @{
-                                'Content-Type' = 'application/json'
-                                'Accept' = 'application/json'
-                                'Authorization' = "Bearer $token"
-                           }
-            }
+        $Headers = Get-AzAccessTokenManagement -AzAppId $AzAppId `
+                                               -AzAppSecret $AzAppSecret `
+                                               -TenantId $TenantId
 
     #--------------------------------------------------------------------------
     # build LogAnalytics Table schema based upon data source
@@ -836,43 +770,31 @@ Function Update-AzDataCollectionRuleLogAnalyticsCustomLogTableSchema ($SchemaSou
         $DCR = Invoke-RestMethod -Uri $DcrUri -Method PUT -Body $DcrPayload -Headers $Headers
 }
 
+#Function Update-AzDataCollectionRuleDceEndpoint ($DcrResourceId, $DceResourceId, $AzAppId, $AzAppSecret, $TenantId)
 
-Function Update-AzDataCollectionRuleDceEndpoint ($DcrResourceId, $DceResourceId, $AzAppId, $AzAppSecret, $TenantId)
+Function Update-AzDataCollectionRuleDceEndpoint
 {
+    [CmdletBinding()]
+    param(
+            [Parameter(mandatory)]
+                [string]$DcrResourceId,
+            [Parameter(mandatory)]
+                [string]$DceResourceId,
+            [Parameter()]
+                [string]$AzAppId,
+            [Parameter()]
+                [string]$AzAppSecret,
+            [Parameter()]
+                [string]$TenantId
+         )
+  
     #--------------------------------------------------------------------------
     # Connection
     #--------------------------------------------------------------------------
-        If ( ($AzAppId) -and ($AzAppSecret) -and ($TenantId) )
-            {
-                $AccessTokenUri = 'https://management.azure.com/'
-                $oAuthUri       = "https://login.microsoftonline.com/$($TenantId)/oauth2/token"
-                $authBody       = [Ordered] @{
-                                               resource = "$AccessTokenUri"
-                                               client_id = "$($LogIngestAppId)"
-                                               client_secret = "$($LogIngestAppSecret)"
-                                               grant_type = 'client_credentials'
-                                             }
-                $authResponse = Invoke-RestMethod -Method Post -Uri $oAuthUri -Body $authBody -ErrorAction Stop
-                $token = $authResponse.access_token
 
-                # Set the WebRequest headers
-                $Headers = @{
-                                'Content-Type' = 'application/json'
-                                'Accept' = 'application/json'
-                                'Authorization' = "Bearer $token"
-                            }
-            }
-        Else
-            {
-                $AccessToken = Get-AzAccessToken -ResourceUrl https://management.azure.com/
-                $Token = $AccessToken.Token
-
-                $Headers = @{
-                                'Content-Type' = 'application/json'
-                                'Accept' = 'application/json'
-                                'Authorization' = "Bearer $token"
-                           }
-            }
+        $Headers = Get-AzAccessTokenManagement -AzAppId $AzAppId `
+                                               -AzAppSecret $AzAppSecret `
+                                               -TenantId $TenantId
 
     #--------------------------------------------------------------------------
     # get existing DCR
@@ -902,42 +824,31 @@ Function Update-AzDataCollectionRuleDceEndpoint ($DcrResourceId, $DceResourceId,
         $DCR = Invoke-RestMethod -Uri $DcrUri -Method PUT -Body $DcrPayload -Headers $Headers
 }
 
-Function Delete-AzLogAnalyticsCustomLogTables ($TableNameLike, $AzLogWorkspaceResourceId, $AzAppId, $AzAppSecret, $TenantId)
+#Function Delete-AzLogAnalyticsCustomLogTables ($TableNameLike, $AzLogWorkspaceResourceId, $AzAppId, $AzAppSecret, $TenantId)
+
+Function Delete-AzLogAnalyticsCustomLogTables
 {
+    [CmdletBinding()]
+    param(
+            [Parameter(mandatory)]
+                [string]$TableNameLike,
+            [Parameter(mandatory)]
+                [string]$AzLogWorkspaceResourceId,
+            [Parameter()]
+                [string]$AzAppId,
+            [Parameter()]
+                [string]$AzAppSecret,
+            [Parameter()]
+                [string]$TenantId
+         )
+
     #--------------------------------------------------------------------------
     # Connection
     #--------------------------------------------------------------------------
-        If ( ($AzAppId) -and ($AzAppSecret) -and ($TenantId) )
-            {
-                $AccessTokenUri = 'https://management.azure.com/'
-                $oAuthUri       = "https://login.microsoftonline.com/$($TenantId)/oauth2/token"
-                $authBody       = [Ordered] @{
-                                               resource = "$AccessTokenUri"
-                                               client_id = "$($LogIngestAppId)"
-                                               client_secret = "$($LogIngestAppSecret)"
-                                               grant_type = 'client_credentials'
-                                             }
-                $authResponse = Invoke-RestMethod -Method Post -Uri $oAuthUri -Body $authBody -ErrorAction Stop
-                $token = $authResponse.access_token
 
-                # Set the WebRequest headers
-                $Headers = @{
-                                'Content-Type' = 'application/json'
-                                'Accept' = 'application/json'
-                                'Authorization' = "Bearer $token"
-                            }
-            }
-        Else
-            {
-                $AccessToken = Get-AzAccessToken -ResourceUrl https://management.azure.com/
-                $Token = $AccessToken.Token
-
-                $Headers = @{
-                                'Content-Type' = 'application/json'
-                                'Accept' = 'application/json'
-                                'Authorization' = "Bearer $token"
-                           }
-            }
+        $Headers = Get-AzAccessTokenManagement -AzAppId $AzAppId `
+                                               -AzAppSecret $AzAppSecret `
+                                               -TenantId $TenantId
 
 
     #--------------------------------------------------------------------------
@@ -999,43 +910,29 @@ Function Delete-AzLogAnalyticsCustomLogTables ($TableNameLike, $AzLogWorkspaceRe
             }
 }
 
+# Function Delete-AzDataCollectionRules ($DcrNameLike, $AzAppId, $AzAppSecret, $TenantId)
 
-Function Delete-AzDataCollectionRules ($DcrNameLike, $AzAppId, $AzAppSecret, $TenantId)
+Function Delete-AzDataCollectionRules
 {
+    [CmdletBinding()]
+    param(
+            [Parameter(mandatory)]
+                [string]$DcrNameLike,
+            [Parameter()]
+                [string]$AzAppId,
+            [Parameter()]
+                [string]$AzAppSecret,
+            [Parameter()]
+                [string]$TenantId
+         )
+
     #--------------------------------------------------------------------------
     # Connection
     #--------------------------------------------------------------------------
-        If ( ($AzAppId) -and ($AzAppSecret) -and ($TenantId) )
-            {
-                $AccessTokenUri = 'https://management.azure.com/'
-                $oAuthUri       = "https://login.microsoftonline.com/$($TenantId)/oauth2/token"
-                $authBody       = [Ordered] @{
-                                               resource = "$AccessTokenUri"
-                                               client_id = "$($LogIngestAppId)"
-                                               client_secret = "$($LogIngestAppSecret)"
-                                               grant_type = 'client_credentials'
-                                             }
-                $authResponse = Invoke-RestMethod -Method Post -Uri $oAuthUri -Body $authBody -ErrorAction Stop
-                $token = $authResponse.access_token
 
-                # Set the WebRequest headers
-                $Headers = @{
-                                'Content-Type' = 'application/json'
-                                'Accept' = 'application/json'
-                                'Authorization' = "Bearer $token"
-                            }
-            }
-        Else
-            {
-                $AccessToken = Get-AzAccessToken -ResourceUrl https://management.azure.com/
-                $Token = $AccessToken.Token
-
-                $Headers = @{
-                                'Content-Type' = 'application/json'
-                                'Accept' = 'application/json'
-                                'Authorization' = "Bearer $token"
-                           }
-            }
+        $Headers = Get-AzAccessTokenManagement -AzAppId $AzAppId `
+                                               -AzAppSecret $AzAppSecret `
+                                               -TenantId $TenantId
 
     #--------------------------------------------------------------------------
     # Getting list of Azure Data Collection Rules using ARG
@@ -1096,49 +993,31 @@ Function Delete-AzDataCollectionRules ($DcrNameLike, $AzAppId, $AzAppSecret, $Te
             }
 }
 
+# Function Get-AzDcrDceDetails ($DceName, $DcrName, $AzAppId, $AzAppSecret, $TenantId)
 
-Function Get-AzDcrDceDetails ($DceName, $DcrName, $AzAppId, $AzAppSecret, $TenantId)
+Function Get-AzDcrDceDetails
 {
-    <#  TROUBLESHOOTING
-
-        $DcrName  = "dcr-Clt-Demo2_Processes_CL"
-        $DceName  = "dce-platform-management-client-p"
-    #>
+    [CmdletBinding()]
+    param(
+            [Parameter(mandatory)]
+                [string]$DceName,
+            [Parameter(mandatory)]
+                [string]$DcrName,
+            [Parameter()]
+                [string]$AzAppId,
+            [Parameter()]
+                [string]$AzAppSecret,
+            [Parameter()]
+                [string]$TenantId
+         )
 
     #--------------------------------------------------------------------------
     # Connection
     #--------------------------------------------------------------------------
-        If ( ($AzAppId) -and ($AzAppSecret) -and ($TenantId) )
-            {
-                $AccessTokenUri = 'https://management.azure.com/'
-                $oAuthUri       = "https://login.microsoftonline.com/$($TenantId)/oauth2/token"
-                $authBody       = [Ordered] @{
-                                               resource = "$AccessTokenUri"
-                                               client_id = "$($LogIngestAppId)"
-                                               client_secret = "$($LogIngestAppSecret)"
-                                               grant_type = 'client_credentials'
-                                             }
-                $authResponse = Invoke-RestMethod -Method Post -Uri $oAuthUri -Body $authBody -ErrorAction Stop
-                $token = $authResponse.access_token
 
-                # Set the WebRequest headers
-                $Headers = @{
-                                'Content-Type' = 'application/json'
-                                'Accept' = 'application/json'
-                                'Authorization' = "Bearer $token"
-                            }
-            }
-        Else
-            {
-                $AccessToken = Get-AzAccessToken -ResourceUrl https://management.azure.com/
-                $Token = $AccessToken.Token
-
-                $Headers = @{
-                                'Content-Type' = 'application/json'
-                                'Accept' = 'application/json'
-                                'Authorization' = "Bearer $token"
-                           }
-            }
+        $Headers = Get-AzAccessTokenManagement -AzAppId $AzAppId `
+                                               -AzAppSecret $AzAppSecret `
+                                               -TenantId $TenantId
 
     #--------------------------------------------------------------------------
     # Get DCEs from Azure Resource Graph
@@ -1296,30 +1175,29 @@ Function Get-AzDcrDceDetails ($DceName, $DcrName, $AzAppId, $AzAppSecret, $Tenan
         return
 }
 
+#Function Post-AzLogAnalyticsLogIngestCustomLogDcrDce ($DceURI, $DcrImmutableId, $DcrStream, $Data, $BatchAmount, $AzAppId, $AzAppSecret, $TenantId)
 
-Function Post-AzLogAnalyticsLogIngestCustomLogDcrDce ($DceURI, $DcrImmutableId, $DcrStream, $Data, $BatchAmount, $AzAppId, $AzAppSecret, $TenantId)
+Function Post-AzLogAnalyticsLogIngestCustomLogDcrDce
 {
-
-        <#  TROUBLESHOOTING
-
-        $DceUri              = $AzLogAnalyticsCustomLogDetails[0]
-        $DcrImmutableId      = $AzLogAnalyticsCustomLogDetails[1]
-        $DcrStream           = $AzLogAnalyticsCustomLogDetails[2]
-        $Data                = $DataVariable
-        $AzAppId             = $Global:AzDcrLogIngestAppId
-        $AzAppSecret         = $Global:AzDcrLogIngestAppSecret
-        $TenantId            = $Global:TenantId
-
-        # ClientInspector
-        $DceUri              = $AzDcrDceDetails[2]
-        $DcrImmutableId      = $AzDcrDceDetails[6]
-        $DcrStream           = $AzDcrDceDetails[7]
-        $Data                = $DataVariable
-        $AzAppId             = $LogIngestAppId
-        $AzAppSecret         = $LogIngestAppSecret
-        $TenantId            = $TenantId
-        
-        #>
+    [CmdletBinding()]
+    param(
+            [Parameter(mandatory)]
+                [string]$DceURI,
+            [Parameter(mandatory)]
+                [string]$DcrImmutableId,
+            [Parameter(mandatory)]
+                [string]$DcrStream,
+            [Parameter(mandatory)]
+                [Array]$Data,
+            [Parameter()]
+                [string]$BatchAmount,
+            [Parameter()]
+                [string]$AzAppId,
+            [Parameter()]
+                [string]$AzAppSecret,
+            [Parameter()]
+                [string]$TenantId
+         )
 
     #--------------------------------------------------------------------------
     # Data check
@@ -1405,6 +1283,9 @@ Function Post-AzLogAnalyticsLogIngestCustomLogDcrDce ($DceURI, $DcrImmutableId, 
                                 }
 
                             $uri = "$DceURI/dataCollectionRules/$DcrImmutableId/streams/$DcrStream"+"?api-version=2021-11-01-preview"
+                            
+                            # set encoding to UTF8
+                            $JSON = [System.Text.Encoding]::UTF8.GetBytes($JSON)
 
                             $Result = Invoke-WebRequest -Uri $uri -Method POST -Body $JSON -Headers $headers -ErrorAction SilentlyContinue
                             $StatusCode = $Result.StatusCode
@@ -1433,15 +1314,15 @@ Function Post-AzLogAnalyticsLogIngestCustomLogDcrDce ($DceURI, $DcrImmutableId, 
         Write-host ""
 }
 
+#Function ValidateFix-AzLogAnalyticsTableSchemaColumnNames ($Data)
 
-Function ValidateFix-AzLogAnalyticsTableSchemaColumnNames ($Data)
+Function ValidateFix-AzLogAnalyticsTableSchemaColumnNames
 {
-    <#  TROUBLESHOOTING
-        
-        $Data = $DataVariable
-
-    #>
-
+    [CmdletBinding()]
+    param(
+            [Parameter(mandatory)]
+                [Array]$Data
+         )
 
     $ProhibitedColumnNames = @("_ResourceId","id","_ResourceId","_SubscriptionId","TenantId","Type","UniqueId","Title")
 
@@ -1450,6 +1331,8 @@ Function ValidateFix-AzLogAnalyticsTableSchemaColumnNames ($Data)
     #-----------------------------------------------------------------------    
     # Initial check
     $IssuesFound = $false
+
+    $data = $DataVariable
 
         # loop through data
         ForEach ($Entry in $Data)
@@ -1461,7 +1344,7 @@ Function ValidateFix-AzLogAnalyticsTableSchemaColumnNames ($Data)
                         # get column name
                         $ColumnName = $Column.Name
 
-                        If ($ColumnName -in $ProhibitedColumnNames)   # phohibited column names
+                        If ($ColumnName -in $ProhibitedColumnNames)   # prohibited column names
                             {
                                 $IssuesFound = $true
                                 write-host "  ISSUE - Column name is prohibited [ $($ColumnName) ]"
@@ -1570,18 +1453,20 @@ Function ValidateFix-AzLogAnalyticsTableSchemaColumnNames ($Data)
     Return $Data
 }
 
+#Function Build-DataArrayToAlignWithSchema ($Data)
 
-Function Build-DataArrayToAlignWithSchema ($Data)
+Function Build-DataArrayToAlignWithSchema
 {
-    <#  TROUBLESHOOTING
-        
-        $Data = $DataVariable
-    #>
+    [CmdletBinding()]
+    param(
+            [Parameter(mandatory)]
+                [Array]$Data
+         )
 
     Write-host "  Aligning source object structure with schema ... Please Wait !"
     
     # Get schema
-    $Schema = Get-ObjectSchema -Data $DataVariable -ReturnFormat Array
+    $Schema = Get-ObjectSchemaAsArray -Data $Data
 
     $DataCount  = ($Data | Measure-Object).Count
 
@@ -1619,38 +1504,61 @@ Function Build-DataArrayToAlignWithSchema ($Data)
 }
 
 
+# Function Get-AzDataCollectionRuleNamingConventionSrv ($TableName)
 
-Function Get-AzDataCollectionRuleNamingConventionSrv ($TableName)
-    {
-        # variables to be used for upload of data using DCR/log ingest api
-        $DcrName    = "dcr-" + $Global:AzDcrPrefixSrvNetworkCloud + "-" + $TableName + "_CL"
-        $DceName    = $Global:AzDceNameSrvNetworkCloud
-        Return $DcrName, $DceName
-    }
+Function Get-AzDataCollectionRuleNamingConventionSrv
+{
+    [CmdletBinding()]
+    param(
+            [Parameter(mandatory)]
+                [string]$TableName
+         )
 
-Function Get-AzDataCollectionRuleNamingConventionClt ($TableName)
-    {
-        # variables to be used for upload of data using DCR/log ingest api
-        $DcrName    = "dcr-" + $Global:AzDcrPrefixClient + "-" + $TableName + "_CL"
-        $DceName    = $Global:AzDceNameClient
-        Return $DcrName, $DceName
-    }
+    # variables to be used for upload of data using DCR/log ingest api
+    $DcrName    = "dcr-" + $Global:AzDcrPrefixSrvNetworkCloud + "-" + $TableName + "_CL"
+    $DceName    = $Global:AzDceNameSrvNetworkCloud
 
-Function Get-AzLogAnalyticsTableAzDataCollectionRuleStatus ($AzLogWorkspaceResourceId, $TableName, $DcrName, $SchemaSourceObject, $AzAppId, $AzAppSecret, $TenantId)
-    {
+    Return $DcrName, $DceName
+}
 
-<#  TROUBLESHOOTING
+#Function Get-AzDataCollectionRuleNamingConventionClt ($TableName)
+Function Get-AzDataCollectionRuleNamingConventionClt
+{
+    [CmdletBinding()]
+    param(
+            [Parameter(mandatory)]
+                [string]$TableName
+         )
 
-    # ClientInspector
-    $AzLogWorkspaceResourceId             = $LogAnalyticsWorkspaceResourceId
-    $TableName                            = $TableName
-    $DcrName                              = $DcrName
-    $SchemaSourceObject                   = $Schema
-    $AzAppId                              = $LogIngestAppId
-    $AzAppSecret                          = $LogIngestAppSecret
-    $TenantId                             = $TenantId
+    # variables to be used for upload of data using DCR/log ingest api
+    $DcrName    = "dcr-" + $Global:AzDcrPrefixClient + "-" + $TableName + "_CL"
+    $DceName    = $Global:AzDceNameClient
 
-#>
+    Return $DcrName, $DceName
+}
+
+#Function Get-AzLogAnalyticsTableAzDataCollectionRuleStatus ($AzLogWorkspaceResourceId, $TableName, $DcrName, $SchemaSourceObject, $AzAppId, $AzAppSecret, $TenantId)
+
+Function Get-AzLogAnalyticsTableAzDataCollectionRuleStatus
+{
+    [CmdletBinding()]
+    param(
+            [Parameter(mandatory)]
+                [string]$AzLogWorkspaceResourceId,
+            [Parameter(mandatory)]
+                [string]$TableName,
+            [Parameter(mandatory)]
+                [string]$DcrName,
+            [Parameter(mandatory)]
+                [array]$SchemaSourceObject,
+            [Parameter()]
+                [string]$AzAppId,
+            [Parameter()]
+                [string]$AzAppSecret,
+            [Parameter()]
+                [string]$TenantId
+         )
+
 
     Write-host "  Checking LogAnalytics table and Data Collection Rule configuration .... Please Wait !"
 
@@ -1660,37 +1568,10 @@ Function Get-AzLogAnalyticsTableAzDataCollectionRuleStatus ($AzLogWorkspaceResou
     #--------------------------------------------------------------------------
     # Connection
     #--------------------------------------------------------------------------
-        If ( ($AzAppId) -and ($AzAppSecret) -and ($TenantId) )
-            {
-                $AccessTokenUri = 'https://management.azure.com/'
-                $oAuthUri       = "https://login.microsoftonline.com/$($TenantId)/oauth2/token"
-                $authBody       = [Ordered] @{
-                                               resource = "$AccessTokenUri"
-                                               client_id = "$($LogIngestAppId)"
-                                               client_secret = "$($LogIngestAppSecret)"
-                                               grant_type = 'client_credentials'
-                                             }
-                $authResponse = Invoke-RestMethod -Method Post -Uri $oAuthUri -Body $authBody -ErrorAction Stop
-                $token = $authResponse.access_token
 
-                # Set the WebRequest headers
-                $Headers = @{
-                                'Content-Type' = 'application/json'
-                                'Accept' = 'application/json'
-                                'Authorization' = "Bearer $token"
-                            }
-            }
-        Else
-            {
-                $AccessToken = Get-AzAccessToken -ResourceUrl https://management.azure.com/
-                $Token = $AccessToken.Token
-
-                $Headers = @{
-                                'Content-Type' = 'application/json'
-                                'Accept' = 'application/json'
-                                'Authorization' = "Bearer $token"
-                           }
-            }
+        $Headers = Get-AzAccessTokenManagement -AzAppId $AzAppId `
+                                               -AzAppSecret $AzAppSecret `
+                                               -TenantId $TenantId
 
         #--------------------------------------------------------------------------
         # Check if Azure LogAnalytics Table exist
@@ -1764,290 +1645,157 @@ Function Get-AzLogAnalyticsTableAzDataCollectionRuleStatus ($AzLogWorkspaceResou
     }
 
 
-Function Add-ColumnDataToAllEntriesInArray ($Column1Name, $Column1Data, $Column2Name, $Column2Data, $Column3Name, $Column3Data, $Data)
-    {
-        Write-host "  Adding columns to all entries in array .... please wait !"
-        $IntermediateObj = @()
-        ForEach ($Entry in $Data)
-            {
-                If ($Column1Name)
-                    {
-                        $Entry | Add-Member -MemberType NoteProperty -Name $Column1Name -Value $Column1Data -Force
-                    }
+#Function Add-ColumnDataToAllEntriesInArray ($Column1Name, $Column1Data, $Column2Name, $Column2Data, $Column3Name, $Column3Data, $Data)
 
-                If ($Column2Name)
-                    {
-                        $Entry | Add-Member -MemberType NoteProperty -Name $Column2Name -Value $Column2Data -Force
-                    }
-
-                If ($Column3Name)
-                    {
-                        $Entry | Add-Member -MemberType NoteProperty -Name $Column3Name -Value $Column3Data -Force
-                    }
-
-                $IntermediateObj += $Entry
-            }
-        return $IntermediateObj
-    }
-
-Function Add-CollectionTimeToAllEntriesInArray ($Data)
-    {
-        [datetime]$CollectionTime = ( Get-date ([datetime]::Now.ToUniversalTime()) -format "yyyy-MM-ddTHH:mm:ssK" )
-
-        Write-host "  Adding CollectionTime to all entries in array .... please wait !"
-        $IntermediateObj = @()
-        ForEach ($Entry in $Data)
-            {
-                $Entry | Add-Member -MemberType NoteProperty -Name CollectionTime -Value $CollectionTime -Force
-
-                $IntermediateObj += $Entry
-            }
-        return $IntermediateObj
-    }
-
-
-Function Convert-CimArrayToObjectFixStructure ($Data)
-    {
-        Write-host "  Converting CIM array to Object & removing CIM class data in array .... please wait !"
-
-        # Convert from array to object
-        $Object = $Data | ConvertTo-Json | ConvertFrom-Json 
-
-        # remove CIM info columns from object
-        $ObjectModified = $Object | Select-Object -Property * -ExcludeProperty CimClass, CimInstanceProperties, CimSystemProperties
-
-        return $ObjectModified
-    }
-
-Function Convert-PSArrayToObjectFixStructure ($Data)
-    {
-        Write-host "  Converting PS array to Object & removing PS class data in array .... please wait !"
-
-        # Convert from array to object
-        $Object = $Data | ConvertTo-Json | ConvertFrom-Json 
-
-        # remove CIM info columns from object
-        $ObjectModified = $Object | Select-Object -Property * -ExcludeProperty PSPath, PSProvider, PSParentPath, PSDrive, PSChildName, PSSnapIn
-
-        return $ObjectModified
-    }
-
-
-Function Collect_MDE_Data_Upload_LogAnalytics ($CustomTable, $CollectionType, $Url, $AzLogWorkspaceResourceId, $TablePrefix, $DceName)
-    { 
-
-        <#  TROUBLESHOOTING
-
-            $CollectionType            = $CollectionType
-            $Url                       = $Url
-            $CustomTable               = $CustomTable
-            $AzLogWorkspaceResourceId  = $global:MainLogAnalyticsWorkspaceResourceId
-            $TablePrefix               = $Global:AzDcrPrefixSrvNetworkCloud
-            $DceName                   = $Global:AzDceNameSrvNetworkCloud
-
-        #>
-
-        ##########################################
-        # COLLECTION OF DATA
-        ##########################################
-            Write-Output ""
-            Write-Output "Collecting $($CollectionType) .... Please Wait !"
-
-            $ResponseAllRecords = @()
-            while ($Url -ne $null)
-                {
-                    # Connect to MDE API
-                    Write-Output ""
-                    Write-Output "  Retrieving data-set from Microsoft Defender Security Center API ... Please Wait !"
-                    Connect_MDE_API
-
-                        try 
-                            {
-                                # todo: verify that the bearer token is still good -- hasn't expired yet -- if it has, then get a new token before making the request
-                                $ResponseRaw = Invoke-WebRequest -Method 'Get' -Uri $Url -Headers $global:Headers
-                                $ResponseAllRecords += $ResponseRaw.content
-                                $ResponseRawJSON = ($ResponseRaw | ConvertFrom-Json)
-
-                                if($ResponseRawJSON.'@odata.nextLink')
-                                    {
-                                        $Url = $ResponseRawJSON.'@odata.nextLink'
-                                    } 
-                                else 
-                                    {
-                                        $Url = $null
-                                    }
-  
-                            }
-                        catch 
-                            {
-                                Write-output ""
-                                Write-Output "StatusCode: " $_.Exception.Response.StatusCode.value__
-                                Write-Output "StatusDescription:" $_.Exception.Response.StatusDescription
-                                Write-output ""
-  
-                                if($_.ErrorDetails.Message)
-                                    {
-                                        Write-Output ""
-                                        Write-Output "Inner Error: $_.ErrorDetails.Message"
-                                        Write-output ""
-                                    }
-  
-                                # check for a specific error so that we can retry the request otherwise, set the url to null so that we fall out of the loop
-                                if ($_.Exception.Response.StatusCode.value__ -eq 403 )
-                                    {
-                                        # just ignore, leave the url the same to retry but pause first
-                                        if($retryCount -ge $maxRetries)
-                                            {
-                                                # not going to retry again
-                                                $global:Url = $null
-                                                Write-Output 'Not going to retry...'
-                                            }
-                                        else 
-                                            {
-                                                $retryCount += 1
-                                                write-Output ""
-                                                Write-Output "Retry attempt $retryCount after a $pauseDuration second pause..."
-                                                Write-output ""
-                                                Start-Sleep -Seconds $pauseDuration
-                                            }
-                                    }
-                                    else
-                                        {
-                                            # not going to retry -- set the url to null to fall back out of the while loop
-                                            $Url = $null
-                                        }
-                            }
-                }
-
-        ##########################################
-        # UPLOAD OF DATA
-        ##########################################
-
-            ##################################################################################################################
-            # LogAnalytics upload
-            ##################################################################################################################
-
-            $DataVariable     =  ( $ResponseAllRecords  | ConvertFrom-Json).value
-
-            Write-Output ""
-            Write-Output "  Retrieved $($DataVariable.count) records from Security Center API"
-
-            # SCOPE - Use only devices in $MachineLine
-            $DataVariable     = $DataVariable | Where-Object { $_.deviceName -in $global:MachineList.computerDnsName }
-
-            Write-Output ""
-            Write-Output "  Filtered records to $($DataVariable.count) due to $($global:TargetTable) scoping"
-            Write-Output ""
-
-            #-------------------------------------------------------
-            # Add Collection Time to array for each line
-                    
-            If ($DataVariable -eq $null)
-                {
-                    Write-Output "No data to upload"
-                }
-            Else
-                {
-                    $CountDataVariable = $DataVariable.count
-                    $PosDataVariable   = 0
-                        Do
-                            {
-                                $DataVariable[$PosDataVariable] | Add-Member -Type NoteProperty -Name 'CollectionTime' -Value $CollectionTime -force
-                                $PosDataVariable = 1 + $PosDataVariable
-                            }
-                        Until ($PosDataVariable -eq $CountDataVariable)
-
-                    #----------------------------------------------------------------------------------------------------------------------------------------------------
-                    # Post to LogAnalytics - Methods supported: Legacy = HTTP Log Collector, DCR = Log Ingest API with DCRs/DCEs, Legacy_DCR = send using both methods
-                    #----------------------------------------------------------------------------------------------------------------------------------------------------
-
-                        # Legacy
-                        If ( ($Global:AzLogAnalyticsAPI -eq "Legacy") -or ($Global:AzLogAnalyticsAPI -eq $null) -or ($Global:AzLogAnalyticsAPI -eq "Legacy_DCR") )
-                            {    
-                                $indexLoopFrom = 0
-
-                                Do
-                                    {
-                                        $indexLoopTo = $indexLoopFrom + 25000
-
-                                        Write-Output "  [$($indexLoopFrom)..$($indexLoopTo)] - Converting array-data to JSON ... Please Wait"
-                                        $json = $DataVariable[$indexLoopFrom..$indexLoopTo] | ConvertTo-Json -Compress
-
-                                        write-Output ""
-                                        Write-Output "  [$($indexLoopFrom)..$($indexLoopTo)] - Posting data to Loganalytics table $($global:CustomTable) .... Please Wait !"
-                                        Post-LogAnalyticsData -customerId $global:LAWS_Id -sharedKey $global:LAWS_AccessKey -body ([System.Text.Encoding]::UTF8.GetBytes($json)) -logType $CustomTable
-                                        $indexLoopFrom = $indexLoopTo
-                                    }
-
-                                Until ($IndexLoopTo -ge $CountDataVariable)
-                            }
-
-                        # Modern (DCR)        
-                        If ( ($Global:AzLogAnalyticsAPI -eq "DCR") -or ($Global:AzLogAnalyticsAPI -eq "Legacy_DCR") )
-                            {    
-                                #-------------------------------------------------------------------------------------------
-                                # Variables
-                                #-------------------------------------------------------------------------------------------
-                
-                                    $TableName    = $CustomTable + $Global:AzDcrTableNamePostfix
-                                    $DataVariable = $DataVariable
-                                    $VerbosePreference = "SilentlyContinue"  # Stop, Inquire, Continue, SilentlyContinue
-
-                                #-------------------------------------------------------------------------------------------
-                                # Validating/fixing schema data structure of source data
-                                #-------------------------------------------------------------------------------------------
-
-                                    $DataVariable = ValidateFix-AzLogAnalyticsTableSchemaColumnNames -Data $DataVariable
-
-                                #-------------------------------------------------------------------------------------------
-                                # Check if table and DCR exist, otherwise set flag to do initial setup
-                                #-------------------------------------------------------------------------------------------
-
-                                    $Status = Get-AzLogAnalyticsTableAzDataCollectionRuleExistStatus -AzLogWorkspaceResourceId $global:MainLogAnalyticsWorkspaceResourceId -TableName $TableName -TablePrefix $Global:AzDcrPrefixSrvNetworkCloud
-
-                                #-------------------------------------------------------------------------------------------
-                                # PreReq - Create/update table (DCR) in LogAnalytics to be used for upload of data via DCR/log ingestion api
-                                #-------------------------------------------------------------------------------------------
-
-                                    If ($Global:AzDcrDceTableCustomLogCreateUpdate -eq $true)
-                                        {
-                                            If ( $env:COMPUTERNAME -in $Global:AzDcrDceTableCustomLogCreateMasterServer)
-                                                {
-                                                    Create-AzLogAnalyticsCustomLogTableDcr -AzLogWorkspaceResourceId $global:MainLogAnalyticsWorkspaceResourceId -SchemaSourceObject $DataVariable -TableName $TableName `
-                                                                                           -AzAppId $global:HighPriv_Modern_ApplicationID_Azure -AzAppSecret $global:HighPriv_Modern_Secret_Azure -TenantId $Global:TenantId
-
-
-                                                    Create-AzDataCollectionRuleLogIngestCustomLog -AzLogWorkspaceResourceId $global:MainLogAnalyticsWorkspaceResourceId -SchemaSourceObject $DataVariable `
-                                                                                                  -DceName $Global:AzDceNameSrvNetworkCloud -TableName $TableName -TablePrefix $Global:AzDcrPrefixSrvNetworkCloud `
-                                                                                                  -LogIngestServicePricipleObjectId $Global:AzDcrLogIngestServicePrincipalObjectId `
-                                                                                                  -AzDcrSetLogIngestApiAppPermissionsDcrLevel $Global:AzDcrSetLogIngestApiAppPermissionsDcrLevel `
-                                                                                                  -AzAppId $global:HighPriv_Modern_ApplicationID_Azure -AzAppSecret $global:HighPriv_Modern_Secret_Azure -TenantId $Global:TenantId
-                                                }
-                                        }
-
-                                #-------------------------------------------------------------------------------------------
-                                # Upload data to LogAnalytics using DCR / DCE / Log Ingestion API
-                                #-------------------------------------------------------------------------------------------
-
-                                    # Get DCE/DCR naming convention for prefix SRV
-                                    $DcrDceNaming = Get-AzDataCollectionRuleNamingConventionSrv -TableName $TableName
-
-                                    # Get details about DCR/DCE using Azure Resource Graph
-                                    $AzDcrDceDetails = Get-AzDcrDceDetails -DcrName $DcrDceNaming[0] -DceName $DcrDceNaming[1]
-                                                                                                                 
-                                    # Post deta into LogAnalytics custom log using log ingest api
-                                    Post-AzLogAnalyticsLogIngestCustomLogDcrDce  -DceUri $AzDcrDceDetails[2] -DcrImmutableId $AzDcrDceDetails[6] `
-                                                                                 -DcrStream $AzDcrDceDetails[7] -Data $DataVariable `
-                                                                                 -AzAppId $global:HighPriv_Modern_ApplicationID_LogIngestion_DCR -AzAppSecret $global:HighPriv_Modern_Secret_LogIngestion_DCR -TenantId $Global:TenantId
-                            }    # Post to LogAnalytics (DCR)
-            }
-    }
-
-Function Get-ObjectSchema ($Data, $ReturnType, $ReturnFormat)
+Function Add-ColumnDataToAllEntriesInArray
 {
-        <#  Troubleshooting
-            $Data = $DataVariable
-        #>
+    [CmdletBinding()]
+    param(
+            [Parameter(mandatory)]
+                [Array]$Data,
+            [Parameter(mandatory)]
+                [string]$Column1Name,
+            [Parameter(mandatory)]
+                [string]$Column1Data,
+            [Parameter()]
+                [string]$Column2Name,
+            [Parameter()]
+                [string]$Column2Data,
+            [Parameter()]
+                [string]$Column3Name,
+            [Parameter()]
+                [string]$Column3Data
+         )
+
+    Write-host "  Adding columns to all entries in array .... please wait !"
+    $IntermediateObj = @()
+    ForEach ($Entry in $Data)
+        {
+            If ($Column1Name)
+                {
+                    $Entry | Add-Member -MemberType NoteProperty -Name $Column1Name -Value $Column1Data -Force
+                }
+
+            If ($Column2Name)
+                {
+                    $Entry | Add-Member -MemberType NoteProperty -Name $Column2Name -Value $Column2Data -Force
+                }
+
+            If ($Column3Name)
+                {
+                    $Entry | Add-Member -MemberType NoteProperty -Name $Column3Name -Value $Column3Data -Force
+                }
+
+            $IntermediateObj += $Entry
+        }
+    return $IntermediateObj
+}
+
+<#
+Function Add-CollectionTimeToAllEntriesInArray
+    [CmdletBinding()]
+    param(
+            [Parameter(mandatory)]
+                [Array]$Data
+         )
+#>
+
+Function Add-CollectionTimeToAllEntriesInArray
+{
+    [CmdletBinding()]
+    param(
+            [Parameter(mandatory)]
+                [Array]$Data
+         )
+
+    [datetime]$CollectionTime = ( Get-date ([datetime]::Now.ToUniversalTime()) -format "yyyy-MM-ddTHH:mm:ssK" )
+
+    Write-host "  Adding CollectionTime to all entries in array .... please wait !"
+    $IntermediateObj = @()
+    ForEach ($Entry in $Data)
+        {
+            $Entry | Add-Member -MemberType NoteProperty -Name CollectionTime -Value $CollectionTime -Force | Out-Null
+
+            $IntermediateObj += $Entry
+        }
+
+    return $IntermediateObj
+
+}
+
+Function OKAdd-CollectionTimeToAllEntriesInArray ($Data)
+{
+    [datetime]$CollectionTime = ( Get-date ([datetime]::Now.ToUniversalTime()) -format "yyyy-MM-ddTHH:mm:ssK" )
+
+    Write-host "  Adding CollectionTime to all entries in array .... please wait !"
+    $IntermediateObj = @()
+    ForEach ($Entry in $Data)
+        {
+            $Entry | Add-Member -MemberType NoteProperty -Name CollectionTime -Value $CollectionTime -Force
+
+            $IntermediateObj += $Entry
+        }
+    return $IntermediateObj
+}
+
+
+# Function Convert-CimArrayToObjectFixStructure ($Data)
+
+Function Convert-CimArrayToObjectFixStructure
+{
+    [CmdletBinding()]
+    param(
+            [Parameter(mandatory)]
+                [Array]$Data
+         )
+
+    Write-host "  Converting CIM array to Object & removing CIM class data in array .... please wait !"
+
+    # Convert from array to object
+    $Object = $Data | ConvertTo-Json | ConvertFrom-Json 
+
+    # remove CIM info columns from object
+    $ObjectModified = $Object | Select-Object -Property * -ExcludeProperty CimClass, CimInstanceProperties, CimSystemProperties
+
+    return $ObjectModified
+}
+
+#Function Convert-PSArrayToObjectFixStructure ($Data)
+
+Function Convert-PSArrayToObjectFixStructure
+{
+    [CmdletBinding()]
+    param(
+            [Parameter(mandatory)]
+                [Array]$Data
+         )
+
+    Write-host "  Converting PS array to Object & removing PS class data in array .... please wait !"
+
+    # Convert from array to object
+    $Object = $Data | ConvertTo-Json | ConvertFrom-Json 
+
+    # remove CIM info columns from object
+    $ObjectModified = $Object | Select-Object -Property * -ExcludeProperty PSPath, PSProvider, PSParentPath, PSDrive, PSChildName, PSSnapIn
+
+    return $ObjectModified
+}
+
+
+# Function Get-ObjectSchema ($Data, $ReturnType, $ReturnFormat)
+
+Function Get-ObjectSchemaAsArray
+{
+
+    [CmdletBinding()]
+    param(
+            [Parameter(mandatory)]
+                [Array]$Data,
+            [Parameter()]
+                [ValidateSet("Table", "DCR")]
+                [string[]]$ReturnType
+         )
+
 
         $SchemaArrayLogAnalyticsTableFormat = @()
         $SchemaArrayDcrFormat = @()
@@ -2118,85 +1866,162 @@ Function Get-ObjectSchema ($Data, $ReturnType, $ReturnFormat)
                     }
             }
 
-            If ( ($ReturnType -eq "Table") -and ($ReturnFormat -eq "Array") )
+            If ($ReturnType -eq "Table")
             {
                 # Return schema format for LogAnalytics table
                 Return $SchemaArrayLogAnalyticsTableFormat
             }
-        ElseIf ( ($ReturnType -eq "Table") -and ($ReturnFormat -eq "Hash") )
-            {
-                # Return schema format for DCR
-                Return $SchemaArrayLogAnalyticsTableFormatHash
-            }
-        ElseIf ( ($ReturnType -eq "DCR") -and ($ReturnFormat -eq "Array") )
+        ElseIf ($ReturnType -eq "DCR")
             {
                 # Return schema format for DCR
                 Return $SchemaArrayDcrFormat
             }
-        ElseIf ( ($ReturnType -eq "DCR") -and ($ReturnFormat -eq "Hash") )
-            {
-                # Return schema format for DCR
-                Return $SchemaArrayDcrFormatHash
-            }
-        ElseIf ( ($ReturnType -eq $null) -and ($ReturnFormat -eq "Hash") )
-            {
-                # Return schema format for DCR
-                Return $SchemaArrayDcrFormatHash
-            }
-        ElseIf ( ($ReturnType -eq $null) -and ($ReturnFormat -eq "Array") )
+        Else
             {
                 # Return schema format for DCR
                 Return $SchemaArrayDcrFormat
             }
+
 }
 
-
-Function Filter-ObjectExcludeProperty ($Data, $ExcludeProperty)
+Function Get-ObjectSchemaAsHash
 {
-        $Data = $Data | Select-Object * -ExcludeProperty $ExcludeProperty
-        Return $Data
+
+    [CmdletBinding()]
+    param(
+            [Parameter(mandatory)]
+                [Array]$Data,
+            [Parameter(mandatory)]
+                [ValidateSet("Table", "DCR")]
+                [string[]]$ReturnType
+         )
+
+
+        $SchemaArrayLogAnalyticsTableFormat = @()
+        $SchemaArrayDcrFormat = @()
+        $SchemaArrayLogAnalyticsTableFormatHash = @()
+        $SchemaArrayDcrFormatHash = @()
+
+        # Requirement - Add TimeGenerated to array
+        $SchemaArrayLogAnalyticsTableFormatHash += @{
+                                                     name        = "TimeGenerated"
+                                                     type        = "datetime"
+                                                     description = ""
+                                                    }
+
+        $SchemaArrayLogAnalyticsTableFormat += [PSCustomObject]@{
+                                                     name        = "TimeGenerated"
+                                                     type        = "datetime"
+                                                     description = ""
+                                               }
+
+        # Loop source object and build hash for table schema
+        ForEach ($Entry in $Data)
+            {
+                $ObjColumns = $Entry | ConvertTo-Json -Depth 100 | ConvertFrom-Json | Get-Member -MemberType NoteProperty
+                ForEach ($Column in $ObjColumns)
+                    {
+                        $ObjDefinitionStr = $Column.Definition
+                                If ($ObjDefinitionStr -like "int*")                                            { $ObjType = "int" }
+                            ElseIf ($ObjDefinitionStr -like "real*")                                           { $ObjType = "int" }
+                            ElseIf ($ObjDefinitionStr -like "long*")                                           { $ObjType = "long" }
+                            ElseIf ($ObjDefinitionStr -like "guid*")                                           { $ObjType = "dynamic" }
+                            ElseIf ($ObjDefinitionStr -like "string*")                                         { $ObjType = "string" }
+                            ElseIf ($ObjDefinitionStr -like "datetime*")                                       { $ObjType = "datetime" }
+                            ElseIf ($ObjDefinitionStr -like "bool*")                                           { $ObjType = "boolean" }
+                            ElseIf ($ObjDefinitionStr -like "object*")                                         { $ObjType = "dynamic" }
+                            ElseIf ($ObjDefinitionStr -like "System.Management.Automation.PSCustomObject*")    { $ObjType = "dynamic" }
+
+                        # build for array check
+                        $SchemaLogAnalyticsTableFormatObjHash = @{
+                                                                   name        = $Column.Name
+                                                                   type        = $ObjType
+                                                                   description = ""
+                                                                 }
+
+                        $SchemaLogAnalyticsTableFormatObj     = [PSCustomObject]@{
+                                                                   name        = $Column.Name
+                                                                   type        = $ObjType
+                                                                   description = ""
+                                                                }
+                        $SchemaDcrFormatObjHash = @{
+                                                      name        = $Column.Name
+                                                      type        = $ObjType
+                                                   }
+
+                        $SchemaDcrFormatObj     = [PSCustomObject]@{
+                                                      name        = $Column.Name
+                                                      type        = $ObjType
+                                                  }
+
+
+                        If ($Column.Name -notin $SchemaArrayLogAnalyticsTableFormat.name)
+                            {
+                                $SchemaArrayLogAnalyticsTableFormat       += $SchemaLogAnalyticsTableFormatObj
+                                $SchemaArrayDcrFormat                     += $SchemaDcrFormatObj
+
+                                $SchemaArrayLogAnalyticsTableFormatHash   += $SchemaLogAnalyticsTableFormatObjHash
+                                $SchemaArrayDcrFormatHash                 += $SchemaDcrFormatObjHash
+                            }
+                    }
+            }
+
+            If ($ReturnType -eq "Table")
+            {
+                # Return schema format for Table
+                $SchemaArrayLogAnalyticsTableFormatHash
+            }
+        ElseIf ($ReturnType -eq "DCR")
+            {
+                # Return schema format for DCR
+                $SchemaArrayDcrFormatHash
+            }
+        
+        Return
+
 }
 
+# Function Filter-ObjectExcludeProperty ($Data, $ExcludeProperty)
 
-Function Get-AzDcrListAll ($AzAppId, $AzAppSecret, $TenantId)
+Function Filter-ObjectExcludeProperty
 {
+    [CmdletBinding()]
+    param(
+            [Parameter(mandatory)]
+                [Array]$Data,
+            [Parameter(mandatory)]
+                [array]$ExcludeProperty
+         )
+
+    $Data = $Data | Select-Object * -ExcludeProperty $ExcludeProperty
+    Return $Data
+}
+
+# Function Get-AzDcrListAll ($AzAppId, $AzAppSecret, $TenantId)
+
+Function Get-AzDcrListAll
+{
+
+    [CmdletBinding()]
+    param(
+            [Parameter()]
+                [string]$AzAppId,
+            [Parameter()]
+                [string]$AzAppSecret,
+            [Parameter()]
+                [string]$TenantId
+         )
+
     Write-host ""
     Write-host "Getting Data Collection Rules from Azure Resource Graph .... Please Wait !"
 
     #--------------------------------------------------------------------------
     # Connection
     #--------------------------------------------------------------------------
-        If ( ($AzAppId) -and ($AzAppSecret) -and ($TenantId) )
-            {
-                $AccessTokenUri = 'https://management.azure.com/'
-                $oAuthUri       = "https://login.microsoftonline.com/$($TenantId)/oauth2/token"
-                $authBody       = [Ordered] @{
-                                               resource = "$AccessTokenUri"
-                                               client_id = "$($LogIngestAppId)"
-                                               client_secret = "$($LogIngestAppSecret)"
-                                               grant_type = 'client_credentials'
-                                             }
-                $authResponse = Invoke-RestMethod -Method Post -Uri $oAuthUri -Body $authBody -ErrorAction Stop
-                $token = $authResponse.access_token
 
-                # Set the WebRequest headers
-                $Headers = @{
-                                'Content-Type' = 'application/json'
-                                'Accept' = 'application/json'
-                                'Authorization' = "Bearer $token"
-                            }
-            }
-        Else
-            {
-                $AccessToken = Get-AzAccessToken -ResourceUrl https://management.azure.com/
-                $Token = $AccessToken.Token
-
-                $Headers = @{
-                                'Content-Type' = 'application/json'
-                                'Accept' = 'application/json'
-                                'Authorization' = "Bearer $token"
-                           }
-            }
+        $Headers = Get-AzAccessTokenManagement -AzAppId $AzAppId `
+                                               -AzAppSecret $AzAppSecret `
+                                               -TenantId $TenantId
 
     #--------------------------------------------------------------------------
     # Get DCRs from Azure Resource Graph
@@ -2225,46 +2050,31 @@ Function Get-AzDcrListAll ($AzAppId, $AzAppSecret, $TenantId)
         Return $Data
 }
 
+#Function Get-AzDceListAll ($AzAppId, $AzAppSecret, $TenantId)
 
-Function Get-AzDceListAll ($AzAppId, $AzAppSecret, $TenantId)
+Function Get-AzDceListAll
 {
+
+    [CmdletBinding()]
+    param(
+            [Parameter()]
+                [string]$AzAppId,
+            [Parameter()]
+                [string]$AzAppSecret,
+            [Parameter()]
+                [string]$TenantId
+         )
+
     Write-host ""
     Write-host "Getting Data Collection Endpoints from Azure Resource Graph .... Please Wait !"
 
     #--------------------------------------------------------------------------
     # Connection
     #--------------------------------------------------------------------------
-        If ( ($AzAppId) -and ($AzAppSecret) -and ($TenantId) )
-            {
-                $AccessTokenUri = 'https://management.azure.com/'
-                $oAuthUri       = "https://login.microsoftonline.com/$($TenantId)/oauth2/token"
-                $authBody       = [Ordered] @{
-                                               resource = "$AccessTokenUri"
-                                               client_id = "$($LogIngestAppId)"
-                                               client_secret = "$($LogIngestAppSecret)"
-                                               grant_type = 'client_credentials'
-                                             }
-                $authResponse = Invoke-RestMethod -Method Post -Uri $oAuthUri -Body $authBody -ErrorAction Stop
-                $token = $authResponse.access_token
 
-                # Set the WebRequest headers
-                $Headers = @{
-                                'Content-Type' = 'application/json'
-                                'Accept' = 'application/json'
-                                'Authorization' = "Bearer $token"
-                            }
-            }
-        Else
-            {
-                $AccessToken = Get-AzAccessToken -ResourceUrl https://management.azure.com/
-                $Token = $AccessToken.Token
-
-                $Headers = @{
-                                'Content-Type' = 'application/json'
-                                'Accept' = 'application/json'
-                                'Authorization' = "Bearer $token"
-                           }
-            }
+        $Headers = Get-AzAccessTokenManagement -AzAppId $AzAppId `
+                                               -AzAppSecret $AzAppSecret `
+                                               -TenantId $TenantId
 
     #--------------------------------------------------------------------------
     # Get DCEs from Azure Resource Graph
@@ -2293,8 +2103,28 @@ Function Get-AzDceListAll ($AzAppId, $AzAppSecret, $TenantId)
         Return $Data
 }
 
-Function Post-AzLogAnalyticsLogIngestCustomLogDcrDce-Output ($Data, $DcrName, $DceName, $AzAppId, $AzAppSecret, $TenantId, $BatchAmount)
+#Function Post-AzLogAnalyticsLogIngestCustomLogDcrDce-Output ($Data, $DcrName, $DceName, $AzAppId, $AzAppSecret, $TenantId, $BatchAmount)
+Function Post-AzLogAnalyticsLogIngestCustomLogDcrDce-Output
 {
+    [CmdletBinding()]
+    param(
+            [Parameter(mandatory)]
+                [Array]$Data,
+            [Parameter(mandatory)]
+                [string]$DcrName,
+            [Parameter(mandatory)]
+                [string]$DceName,
+            [Parameter()]
+                [string]$BatchAmount,
+            [Parameter()]
+                [string]$AzAppId,
+            [Parameter()]
+                [string]$AzAppSecret,
+            [Parameter()]
+                [string]$TenantId
+         )
+
+
         $AzDcrDceDetails = Get-AzDcrDceDetails -DcrName $DcrName -DceName $DceName `
                                                -AzAppId $LogIngestAppId -AzAppSecret $LogIngestAppSecret -TenantId $TenantId
 
@@ -2306,22 +2136,41 @@ Function Post-AzLogAnalyticsLogIngestCustomLogDcrDce-Output ($Data, $DcrName, $D
         $DataVariable | Out-String | Write-Verbose 
 }
 
+<#
 Function CheckCreateUpdate-TableDcr-Structure ($Data, $AzLogWorkspaceResourceId, $TableName, $DcrName, $DceName, $SchemaSourceObject, `
                                                $AzAppId, $AzAppSecret, $TenantId, $LogIngestServicePricipleObjectId, $AzDcrSetLogIngestApiAppPermissionsDcrLevel)
+#>
+
+Function CheckCreateUpdate-TableDcr-Structure
 {
-    <#
-
-        $AzLogWorkspaceResourceId                   = $LogAnalyticsWorkspaceResourceId
-        $AzAppId                                    = $LogIngestAppId
-        $AzAppSecret                                = $LogIngestAppSecret
-        $TenantId                                   = $TenantId
-        $DceName                                    = $DceName
-        $DcrName                                    = $DcrName
-        $TableName                                  = $TableName
-        $LogIngestServicePricipleObjectId           = $AzDcrLogIngestServicePrincipalObjectId
-        $AzDcrSetLogIngestApiAppPermissionsDcrLevel = $AzDcrSetLogIngestApiAppPermissionsDcrLevel
-
-    #>
+    [CmdletBinding()]
+    param(
+            [Parameter(mandatory)]
+                [Array]$Data,
+            [Parameter(mandatory)]
+                [string]$AzLogWorkspaceResourceId,
+            [Parameter(mandatory)]
+                [string]$TableName,
+            [Parameter(mandatory)]
+                [string]$DcrName,
+            [Parameter(mandatory)]
+                [string]$DceName,
+            [Parameter(mandatory)]
+                [string]$LogIngestServicePricipleObjectId,
+            [Parameter(mandatory)]
+                [string]$AzDcrSetLogIngestApiAppPermissionsDcrLevel,
+            [Parameter(mandatory)]
+                [boolean]$AzLogDcrTableCreateFromAnyMachine,
+            [Parameter(mandatory)]
+                [AllowEmptyCollection()]
+                [array]$AzLogDcrTableCreateFromReferenceMachine,
+            [Parameter()]
+                [string]$AzAppId,
+            [Parameter()]
+                [string]$AzAppSecret,
+            [Parameter()]
+                [string]$TenantId
+         )
 
     #-------------------------------------------------------------------------------------------
     # Create/Update Schema for LogAnalytics Table & Data Collection Rule schema
@@ -2332,10 +2181,9 @@ Function CheckCreateUpdate-TableDcr-Structure ($Data, $AzLogWorkspaceResourceId,
                 #-----------------------------------------------------------------------------------------------
                 # Check if table and DCR exist - or schema must be updated due to source object schema changes
                 #-----------------------------------------------------------------------------------------------
-
+                    
                     # Get insight about the schema structure
-                    $Schema = Get-ObjectSchema -Data $DataVariable -ReturnFormat Array
-
+                    $Schema = Get-ObjectSchemaAsArray -Data $Data
                     $StructureCheck = Get-AzLogAnalyticsTableAzDataCollectionRuleStatus -AzLogWorkspaceResourceId $AzLogWorkspaceResourceId -TableName $TableName -DcrName $DcrName -SchemaSourceObject $Schema `
                                                                                         -AzAppId $AzAppId -AzAppSecret $AzAppSecret -TenantId $TenantId
 
@@ -2345,17 +2193,17 @@ Function CheckCreateUpdate-TableDcr-Structure ($Data, $AzLogWorkspaceResourceId,
 
                     If ($StructureCheck -eq $true)
                         {
-                            If ( ( $env:COMPUTERNAME -in $AzDcrDceTableCreateFromReferenceMachine) -or ($AzDcrDceTableCreateFromAnyMachine -eq $true) )    # manage table creations
+                            If ( ( $env:COMPUTERNAME -in $AzLogDcrTableCreateFromReferenceMachine) -or ($AzLogDcrTableCreateFromAnyMachine -eq $true) )    # manage table creations
                                 {
                                     # build schema to be used for LogAnalytics Table
-                                    $Schema = Get-ObjectSchema -Data $DataVariable -ReturnType Table -ReturnFormat Hash
+                                    $Schema = Get-ObjectSchemaAsHash -Data $Data -ReturnType Table
 
                                     CreateUpdate-AzLogAnalyticsCustomLogTableDcr -AzLogWorkspaceResourceId $AzLogWorkspaceResourceId -SchemaSourceObject $Schema -TableName $TableName `
-                                                                                 -AzAppId $AzAppId -AzAppSecret $AzAppSecret -TenantId $TenantId
+                                                                                 -AzAppId $AzAppId -AzAppSecret $AzAppSecret -TenantId $TenantId 
 
 
                                     # build schema to be used for DCR
-                                    $Schema = Get-ObjectSchema -Data $DataVariable -ReturnType DCR -ReturnFormat Hash
+                                    $Schema = Get-ObjectSchemaAsHash -Data $DataVariable -ReturnType DCR
 
                                     CreateUpdate-AzDataCollectionRuleLogIngestCustomLog -AzLogWorkspaceResourceId $AzLogWorkspaceResourceId -SchemaSourceObject $Schema `
                                                                                         -DceName $DceName -DcrName $DcrName -TableName $TableName `
