@@ -1,5 +1,38 @@
 ﻿Function Get-AzAccessTokenManagement
 {
+    <#
+    .SYNOPSIS
+    Get access token for connecting management.azure.com - used for REST API connectivity
+
+    Developed by Morten Knudsen, Microsoft MVP
+
+    .DESCRIPTION
+    Can be used under current connected user - or by Azure app connectivity with secret
+
+    .PARAMETER AzAppId
+    This is the Azure app id og an app with Contributor permissions in LogAnalytics + Resource Group for DCRs
+        
+    .PARAMETER AzAppSecret
+    This is the secret of the Azure app
+
+    .PARAMETER TenantId
+    This is the Azure AD tenant id
+
+    .INPUTS
+    None. You cannot pipe objects
+
+    .OUTPUTS
+    JSON-header to use in invoke-webrequest / invoke-restmethod commands
+
+    .EXAMPLE
+    PS> $Headers = Get-AzAccessTokenManagement -AzAppId <id> -AzAppSecret <secret> -TenantId <id>
+
+    .NOTES
+
+    .LINK
+    https://github.com/KnudsenMorten/AzLogDcrIngestPS
+   #>
+
     [CmdletBinding()]
     param(
             [Parameter()]
@@ -10,45 +43,91 @@
                 [string]$TenantId
          )
 
-        If ( ($AzAppId) -and ($AzAppSecret) -and ($TenantId) )
-            {
-                $AccessTokenUri = 'https://management.azure.com/'
-                $oAuthUri       = "https://login.microsoftonline.com/$($TenantId)/oauth2/token"
-                $authBody       = [Ordered] @{
-                                               resource = "$AccessTokenUri"
-                                               client_id = "$($AzAppId)"
-                                               client_secret = "$($AzAppSecret)"
-                                               grant_type = 'client_credentials'
-                                             }
-                $authResponse = Invoke-RestMethod -Method Post -Uri $oAuthUri -Body $authBody -ErrorAction Stop
-                $token = $authResponse.access_token
+    #--------
 
-                # Set the WebRequest headers
-                $Headers = @{
-                                'Content-Type' = 'application/json'
-                                'Accept' = 'application/json'
-                                'Authorization' = "Bearer $token"
-                            }
-            }
-        Else
-            {
-                $AccessToken = Get-AzAccessToken -ResourceUrl https://management.azure.com/
-                $Token = $AccessToken.Token
+    If ( ($AzAppId) -and ($AzAppSecret) -and ($TenantId) )
+        {
+            $AccessTokenUri = 'https://management.azure.com/'
+            $oAuthUri       = "https://login.microsoftonline.com/$($TenantId)/oauth2/token"
+            $authBody       = [Ordered] @{
+                                            resource = "$AccessTokenUri"
+                                            client_id = "$($AzAppId)"
+                                            client_secret = "$($AzAppSecret)"
+                                            grant_type = 'client_credentials'
+                                            }
+            $authResponse = Invoke-RestMethod -Method Post -Uri $oAuthUri -Body $authBody -ErrorAction Stop
+            $token = $authResponse.access_token
 
-                $Headers = @{
-                                'Content-Type' = 'application/json'
-                                'Accept' = 'application/json'
-                                'Authorization' = "Bearer $token"
-                           }
-            }
+            # Set the WebRequest headers
+            $Headers = @{
+                            'Content-Type' = 'application/json'
+                            'Accept' = 'application/json'
+                            'Authorization' = "Bearer $token"
+                        }
+        }
+    Else
+        {
+            $AccessToken = Get-AzAccessToken -ResourceUrl https://management.azure.com/
+            $Token = $AccessToken.Token
+
+            $Headers = @{
+                            'Content-Type' = 'application/json'
+                            'Accept' = 'application/json'
+                            'Authorization' = "Bearer $token"
+                        }
+        }
 
     Return $Headers
+
+    Export-ModuleMember -Function Get-AzAccessTokenManagement
 }
 
-# Function CreateUpdate-AzLogAnalyticsCustomLogTableDcr ($TableName, $SchemaSourceObject, $AzLogWorkspaceResourceId, $AzAppId, $AzAppSecret, $TenantId)
 
 Function CreateUpdate-AzLogAnalyticsCustomLogTableDcr
 {
+<#
+    .SYNOPSIS
+    Create or Update Azure LogAnalytics Custom Log table - used together with Data Collection Rules (DCR)
+    for Log Ingestion API upload to LogAnalytics
+
+    Developed by Morten Knudsen, Microsoft MVP
+
+    .DESCRIPTION
+    Uses schema based on source object
+
+    .PARAMETER Tablename
+    Specifies the table name in LogAnalytics
+
+    .PARAMETER SchemaSourceObject
+    This is the schema in hash table format coming from the source object
+
+    .PARAMETER AzLogWorkspaceResourceId
+    This is the Loganaytics Resource Id
+
+    .PARAMETER AzAppId
+    This is the Azure app id og an app with Contributor permissions in LogAnalytics + Resource Group for DCRs
+        
+    .PARAMETER AzAppSecret
+    This is the secret of the Azure app
+
+    .PARAMETER TenantId
+    This is the Azure AD tenant id
+
+    .INPUTS
+    None. You cannot pipe objects
+
+    .OUTPUTS
+    Output of REST PUT command. Should be 200 for success
+
+    .EXAMPLE
+    PS> CreateUpdate-AzLogAnalyticsCustomLogTableDcr
+
+    .NOTES
+
+    .LINK
+    https://github.com/KnudsenMorten/AzLogDcrIngestPS
+#>
+
     [CmdletBinding()]
     param(
             [Parameter(mandatory)]
@@ -64,6 +143,7 @@ Function CreateUpdate-AzLogAnalyticsCustomLogTableDcr
             [Parameter()]
                 [string]$TenantId
          )
+
 
     #--------------------------------------------------------------------------
     # Connection
@@ -88,9 +168,9 @@ Function CreateUpdate-AzLogAnalyticsCustomLogTableDcr
     # Creating/Updating LogAnalytics Table based upon data source schema
     #--------------------------------------------------------------------------
 
+<#
         $Changes = $SchemaSourceObject[40]
 
-<#
         $tableBodyPatch = @{
                                 properties = @{
                                                 schema = @{
@@ -122,6 +202,9 @@ Function CreateUpdate-AzLogAnalyticsCustomLogTableDcr
             }
         Catch
             {
+
+            $Result = Invoke-WebRequest -Uri $TableUrl -Method PUT -Headers $Headers -Body $TablebodyPut
+
                 Try
                     {
                         Write-Host ""
@@ -130,9 +213,15 @@ Function CreateUpdate-AzLogAnalyticsCustomLogTableDcr
 
                         Invoke-WebRequest -Uri $TableUrl -Method PUT -Headers $Headers -Body $TablebodyPut
                     }
-                Catch
+                catch
                     {
-                        Write-Host ""
+                        $FailureMessage = $_.Exception.Message
+                        $ErrorDetails = $_.ErrorDetails.Message
+                        Write-host ""
+                        write-host $FailureMessage -ForegroundColor Red
+                        Write-host ""
+                        write-host $ErrorDetails -ForegroundColor Red
+                        Write-host
                         Write-Host "Something went wrong .... recreating table [ $($Table) ] in"
                         Write-host $AzLogWorkspaceResourceId
 
@@ -143,17 +232,86 @@ Function CreateUpdate-AzLogAnalyticsCustomLogTableDcr
                         Invoke-WebRequest -Uri $TableUrl -Method PUT -Headers $Headers -Body $TablebodyPut
                     }
             }
+
         
         return
+
+    Export-ModuleMember -Function CreateUpdate-AzLogAnalyticsCustomLogTableDcr
 }
 
-<#
-    Function CreateUpdate-AzDataCollectionRuleLogIngestCustomLog ($SchemaSourceObject, $AzLogWorkspaceResourceId, $DceName, $DcrName, $TableName, $TablePrefix, $AzDcrSetLogIngestApiAppPermissionsDcrLevel, `
-                                                                  $LogIngestServicePricipleObjectId, $AzAppId, $AzAppSecret, $TenantId)
-#>
+
 
 Function CreateUpdate-AzDataCollectionRuleLogIngestCustomLog
 {
+<#
+    .SYNOPSIS
+    Create or Update Azure Data Collection Rule (DCR) used for log ingestion to Azure LogAnalytics using
+    Log Ingestion API
+
+    Developed by Morten Knudsen, Microsoft MVP
+
+    .DESCRIPTION
+    Uses schema based on source object
+
+    .PARAMETER Tablename
+    Specifies the table name in LogAnalytics
+
+    .PARAMETER SchemaSourceObject
+    This is the schema in hash table format coming from the source object
+
+    .PARAMETER AzLogWorkspaceResourceId
+    This is the Loganaytics Resource Id
+
+    .PARAMETER DceName
+    This is name of the Data Collection Endpoint to use for the upload
+    Function will automatically look check in a global variable ($global:AzDceDetails) - or do a query using Azure Resource Graph to find DCE with name
+    Goal is to find the log ingestion Uri on the DCE
+
+    Variable $global:AzDceDetails can be build before calling this cmdlet using this syntax
+    $global:AzDceDetails = Get-AzDceListAll -AzAppId $LogIngestAppId -AzAppSecret $LogIngestAppSecret -TenantId $TenantId
+ 
+    .PARAMETER DcrName
+    This is name of the Data Collection Rule to use for the upload
+    Function will automatically look check in a global variable ($global:AzDcrDetails) - or do a query using Azure Resource Graph to find DCR with name
+    Goal is to find the DCR immunetable id on the DCR
+
+    Variable $global:AzDcrDetails can be build before calling this cmdlet using this syntax
+    $global:AzDcrDetails = Get-AzDcrListAll -AzAppId $LogIngestAppId -AzAppSecret $LogIngestAppSecret -TenantId $TenantId
+
+    .PARAMETER TableName
+    This is tablename of the LogAnalytics table (and is also used in the DCR naming)
+
+    .PARAMETER AzDcrSetLogIngestApiAppPermissionsDcrLevel
+    Choose TRUE if you want to set Monitoring Publishing Contributor permissions on DCR level
+    Choose FALSE if you would like to use inherited permissions from the resource group level (recommended)
+
+    .PARAMETER LogIngestServicePricipleObjectId
+    This is the object id of the Azure App service-principal
+     - NOTE: Not the object id of the Azure app, but Object Id of the service principal (!)
+
+    .PARAMETER AzAppId
+    This is the Azure app id og an app with Contributor permissions in LogAnalytics + Resource Group for DCRs
+        
+    .PARAMETER AzAppSecret
+    This is the secret of the Azure app
+
+    .PARAMETER TenantId
+    This is the Azure AD tenant id
+
+    .INPUTS
+    None. You cannot pipe objects
+
+    .OUTPUTS
+    Output of REST PUT command. Should be 200 for success
+
+    .EXAMPLE
+    PS> CreateUpdate-AzDataCollectionRuleLogIngestCustomLog
+
+    .NOTES
+
+    .LINK
+    https://github.com/KnudsenMorten/AzLogDcrIngestPS
+#>
 
     [CmdletBinding()]
     param(
@@ -168,7 +326,7 @@ Function CreateUpdate-AzDataCollectionRuleLogIngestCustomLog
             [Parameter(mandatory)]
                 [string]$TableName,
             [Parameter(mandatory)]
-                [string]$AzDcrSetLogIngestApiAppPermissionsDcrLevel,
+                [boolean]$AzDcrSetLogIngestApiAppPermissionsDcrLevel,
             [Parameter(mandatory)]
                 [string]$LogIngestServicePricipleObjectId,
             [Parameter()]
@@ -485,13 +643,49 @@ Function CreateUpdate-AzDataCollectionRuleLogIngestCustomLog
                 Start-Sleep -Seconds 10
                 Write-Host ""
             }
-
+    Export-ModuleMember -Function CreateUpdate-AzDataCollectionRuleLogIngestCustomLog
 }
 
-#Function Update-AzDataCollectionRuleResetTransformKqlDefault ($DcrResourceId, $AzAppId, $AzAppSecret, $TenantId)
-           
+
 Function Update-AzDataCollectionRuleResetTransformKqlDefault
 {
+<#
+    .SYNOPSIS
+    Updates the tranformKql parameter on an existing DCR - and resets it back to default
+
+    Developed by Morten Knudsen, Microsoft MVP
+
+    .DESCRIPTION
+    Used to set transformation back to default, where all data is being sent in - with needed TimeGenerated column
+
+    .PARAMETER $DcrResourceId
+    This is the resource id of the data collection rule
+
+    .PARAMETER AzAppId
+    This is the Azure app id og an app with Contributor permissions in LogAnalytics + Resource Group for DCRs
+        
+    .PARAMETER AzAppSecret
+    This is the secret of the Azure app
+
+    .PARAMETER TenantId
+    This is the Azure AD tenant id
+
+    .INPUTS
+    None. You cannot pipe objects
+
+    .OUTPUTS
+    Output of REST PUT command. Should be 200 for success
+
+    .EXAMPLE
+    PS> Update-AzDataCollectionRuleResetTransformKqlDefault
+
+    .NOTES
+
+    .LINK
+    https://github.com/KnudsenMorten/AzLogDcrIngestPS
+#>
+
+
     [CmdletBinding()]
     param(
             [Parameter(mandatory)]
@@ -545,12 +739,51 @@ Function Update-AzDataCollectionRuleResetTransformKqlDefault
         # update changes to existing DCR
         $DcrUri = "https://management.azure.com" + $DcrResourceId + "?api-version=2022-06-01"
         $DCR = Invoke-RestMethod -Uri $DcrUri -Method PUT -Body $DcrPayload -Headers $Headers
+
+    Export-ModuleMember -Function Update-AzDataCollectionRuleResetTransformKqlDefault
 }
 
-# Function Update-AzDataCollectionRuleTransformKql ($DcrResourceId, $transformKql, $AzAppId, $AzAppSecret, $TenantId)
 
 Function Update-AzDataCollectionRuleTransformKql
 {
+<#
+    .SYNOPSIS
+    Updates the tranformKql parameter on an existing DCR with the provided parameter
+
+    Developed by Morten Knudsen, Microsoft MVP
+
+    .DESCRIPTION
+    Used to enable transformation on a data collection rule
+
+    .PARAMETER $DcrResourceId
+    This is the resource id of the data collection rule
+
+    .PARAMETER $tranformKql
+    This is tranformation query to use
+
+    .PARAMETER AzAppId
+    This is the Azure app id og an app with Contributor permissions in LogAnalytics + Resource Group for DCRs
+        
+    .PARAMETER AzAppSecret
+    This is the secret of the Azure app
+
+    .PARAMETER TenantId
+    This is the Azure AD tenant id
+
+    .INPUTS
+    None. You cannot pipe objects
+
+    .OUTPUTS
+    Output of REST PUT command. Should be 200 for success
+
+    .EXAMPLE
+    PS> Update-AzDataCollectionRuleTransformKql
+
+    .NOTES
+
+    .LINK
+    https://github.com/KnudsenMorten/AzLogDcrIngestPS
+#>
 
     [CmdletBinding()]
     param(
@@ -610,12 +843,57 @@ Function Update-AzDataCollectionRuleTransformKql
         # update changes to existing DCR
         $DcrUri = "https://management.azure.com" + $DcrResourceId + "?api-version=2022-06-01"
         $DCR = Invoke-RestMethod -Uri $DcrUri -Method PUT -Body $DcrPayload -Headers $Headers
-}
 
-# Function Update-AzDataCollectionRuleLogAnalyticsCustomLogTableSchema ($SchemaSourceObject, $TableName, $DcrResourceId, $AzLogWorkspaceResourceId, $AzAppId, $AzAppSecret, $TenantId)
+    Export-ModuleMember -Function Update-AzDataCollectionRuleTransformKql
+}
 
 Function Update-AzDataCollectionRuleLogAnalyticsCustomLogTableSchema
 {
+<#
+    .SYNOPSIS
+    Updates the schema of Azure Loganalytics table + Azure Data Collection Rule - based on source object schema
+
+    Developed by Morten Knudsen, Microsoft MVP
+
+    .DESCRIPTION
+    Used to ensure DCR and LogAnalytics table can accept the structure/schema coming from the source object
+
+    .PARAMETER SchemaSourceObject
+    This is the schema in hash table format coming from the source object
+
+    .PARAMETER Tablename
+    Specifies the table name in LogAnalytics
+
+    .PARAMETER DcrResourceId
+    This is resource id of the Data Collection Rule
+
+    .PARAMETER AzLogWorkspaceResourceId
+    This is the Loganaytics Resource Id
+
+    .PARAMETER AzAppId
+    This is the Azure app id og an app with Contributor permissions in LogAnalytics + Resource Group for DCRs
+        
+    .PARAMETER AzAppSecret
+    This is the secret of the Azure app
+
+    .PARAMETER TenantId
+    This is the Azure AD tenant id
+
+    .INPUTS
+    None. You cannot pipe objects
+
+    .OUTPUTS
+    Output of REST PUT command. Should be 200 for success
+
+    .EXAMPLE
+    PS> Update-AzDataCollectionRuleLogAnalyticsCustomLogTableSchema
+
+    .NOTES
+
+    .LINK
+    https://github.com/KnudsenMorten/AzLogDcrIngestPS
+#>
+
     [CmdletBinding()]
     param(
             [Parameter(mandatory)]
@@ -768,12 +1046,52 @@ Function Update-AzDataCollectionRuleLogAnalyticsCustomLogTableSchema
         # update changes to existing DCR
         $DcrUri = "https://management.azure.com" + $DcrResourceId + "?api-version=2022-06-01"
         $DCR = Invoke-RestMethod -Uri $DcrUri -Method PUT -Body $DcrPayload -Headers $Headers
+
+    Export-ModuleMember -Function Update-AzDataCollectionRuleLogAnalyticsCustomLogTableSchema
 }
 
-#Function Update-AzDataCollectionRuleDceEndpoint ($DcrResourceId, $DceResourceId, $AzAppId, $AzAppSecret, $TenantId)
 
 Function Update-AzDataCollectionRuleDceEndpoint
 {
+<#
+    .SYNOPSIS
+    Updates the DceEndpointUri of the Data Collection Rule
+
+    Developed by Morten Knudsen, Microsoft MVP
+
+    .DESCRIPTION
+    Used to change the Data Collection Endpoint in a Data Collection Rule
+
+    .PARAMETER DcrResourceId
+    This is resource id of the Data Collection Rule which should be changed
+
+    .PARAMETER DceResourceId
+    This is resource id of the Data Collection Endpoint to change to (target)
+
+    .PARAMETER AzAppId
+    This is the Azure app id og an app with Contributor permissions in LogAnalytics + Resource Group for DCRs
+        
+    .PARAMETER AzAppSecret
+    This is the secret of the Azure app
+
+    .PARAMETER TenantId
+    This is the Azure AD tenant id
+
+    .INPUTS
+    None. You cannot pipe objects
+
+    .OUTPUTS
+    Output of REST PUT command. Should be 200 for success
+
+    .EXAMPLE
+    PS> Update-AzDataCollectionRuleDceEndpoint
+
+    .NOTES
+
+    .LINK
+    https://github.com/KnudsenMorten/AzLogDcrIngestPS
+#>
+
     [CmdletBinding()]
     param(
             [Parameter(mandatory)]
@@ -822,12 +1140,52 @@ Function Update-AzDataCollectionRuleDceEndpoint
         # update changes to existing DCR
         $DcrUri = "https://management.azure.com" + $DcrResourceId + "?api-version=2022-06-01"
         $DCR = Invoke-RestMethod -Uri $DcrUri -Method PUT -Body $DcrPayload -Headers $Headers
+
+    Export-ModuleMember -Function Update-AzDataCollectionRuleDceEndpoint
 }
 
-#Function Delete-AzLogAnalyticsCustomLogTables ($TableNameLike, $AzLogWorkspaceResourceId, $AzAppId, $AzAppSecret, $TenantId)
 
 Function Delete-AzLogAnalyticsCustomLogTables
 {
+<#
+    .SYNOPSIS
+    Deletes the Azure Loganalytics defined in like-format, so you can fast clean-up for example after demo or testing
+
+    Developed by Morten Knudsen, Microsoft MVP
+
+    .DESCRIPTION
+    Used to delete many tables in one task
+
+    .PARAMETER TableNameLike
+    Here you can put in the table name(s) you wan to delete using like-format - sample *demo* 
+
+    .PARAMETER AzLogWorkspaceResourceId
+    This is resource id of the Azure LogAnalytics workspace
+
+    .PARAMETER AzAppId
+    This is the Azure app id og an app with Contributor permissions in LogAnalytics + Resource Group for DCRs
+        
+    .PARAMETER AzAppSecret
+    This is the secret of the Azure app
+
+    .PARAMETER TenantId
+    This is the Azure AD tenant id
+
+    .INPUTS
+    None. You cannot pipe objects
+
+    .OUTPUTS
+    Output of REST PUT command. Should be 200 for success
+
+    .EXAMPLE
+    PS> Delete-AzLogAnalyticsCustomLogTables -TableLike *demo* will delete all tables with the word demo in it
+
+    .NOTES
+
+    .LINK
+    https://github.com/KnudsenMorten/AzLogDcrIngestPS
+#>
+
     [CmdletBinding()]
     param(
             [Parameter(mandatory)]
@@ -908,12 +1266,52 @@ Function Delete-AzLogAnalyticsCustomLogTables
                                         }
                                 }
             }
+
+    Export-ModuleMember -Function Delete-AzLogAnalyticsCustomLogTables
 }
 
-# Function Delete-AzDataCollectionRules ($DcrNameLike, $AzAppId, $AzAppSecret, $TenantId)
 
 Function Delete-AzDataCollectionRules
 {
+<#
+    .SYNOPSIS
+    Deletes the Azure Loganalytics defined in like-format, so you can fast clean-up for example after demo or testing
+
+    Developed by Morten Knudsen, Microsoft MVP
+
+    .DESCRIPTION
+    Used to delete many data collection rules in one task
+
+    .PARAMETER DcrnameLike
+    Here you can put in the DCR name(s) you want to delete using like-format - sample *demo* 
+
+    .PARAMETER AzLogWorkspaceResourceId
+    This is resource id of the Azure LogAnalytics workspace
+
+    .PARAMETER AzAppId
+    This is the Azure app id og an app with Contributor permissions in LogAnalytics + Resource Group for DCRs
+        
+    .PARAMETER AzAppSecret
+    This is the secret of the Azure app
+
+    .PARAMETER TenantId
+    This is the Azure AD tenant id
+
+    .INPUTS
+    None. You cannot pipe objects
+
+    .OUTPUTS
+    Output of REST PUT command. Should be 200 for success
+
+    .EXAMPLE
+    PS> Delete-AzDataCollectionRules -DcrNameLike *demo* will delete all DCRs with the word demo in it
+
+    .NOTES
+
+    .LINK
+    https://github.com/KnudsenMorten/AzLogDcrIngestPS
+#>
+
     [CmdletBinding()]
     param(
             [Parameter(mandatory)]
@@ -991,12 +1389,53 @@ Function Delete-AzDataCollectionRules
                                         }
                                 }
             }
+
+    Export-ModuleMember -Function Delete-AzDataCollectionRules
 }
 
-# Function Get-AzDcrDceDetails ($DceName, $DcrName, $AzAppId, $AzAppSecret, $TenantId)
 
 Function Get-AzDcrDceDetails
 {
+<#
+    .SYNOPSIS
+    Retrieves information about data collection rules and data collection endpoints - using Azure Resource Graph
+
+    Developed by Morten Knudsen, Microsoft MVP
+
+    .DESCRIPTION
+    Used to retrieve information about data collection rules and data collection endpoints - using Azure Resource Graph
+    Used by other functions which are looking for DCR/DCE by name
+
+    .PARAMETER DcrName
+    Here you can put in the DCR name you want to find
+
+    .PARAMETER DceName
+    Here you can put in the DCE name you want to find
+
+    .PARAMETER AzAppId
+    This is the Azure app id og an app with Contributor permissions in LogAnalytics + Resource Group for DCRs
+        
+    .PARAMETER AzAppSecret
+    This is the secret of the Azure app
+
+    .PARAMETER TenantId
+    This is the Azure AD tenant id
+
+    .INPUTS
+    None. You cannot pipe objects
+
+    .OUTPUTS
+    Output of REST PUT command. Should be 200 for success
+
+    .EXAMPLE
+    PS> Get-AzDcrDceDetails
+
+    .NOTES
+
+    .LINK
+    https://github.com/KnudsenMorten/AzLogDcrIngestPS
+#>
+
     [CmdletBinding()]
     param(
             [Parameter(mandatory)]
@@ -1173,12 +1612,61 @@ Function Get-AzDcrDceDetails
             }
 
         return
+
+    Export-ModuleMember -Function Get-AzDcrDceDetails
 }
 
-#Function Post-AzLogAnalyticsLogIngestCustomLogDcrDce ($DceURI, $DcrImmutableId, $DcrStream, $Data, $BatchAmount, $AzAppId, $AzAppSecret, $TenantId)
 
 Function Post-AzLogAnalyticsLogIngestCustomLogDcrDce
 {
+<#
+    .SYNOPSIS
+    Send data to LogAnalytics using Log Ingestion API and Data Collection Rule
+
+    Developed by Morten Knudsen, Microsoft MVP
+
+    .DESCRIPTION
+    Data is either sent as one record (if only one exist), batches (calculated value of number of records to send per batch)
+    - or BatchAmount (used only if the size of the records changes so you run into problems with limitations. 
+    In case of diffent sizes, use 1 for BatchAmount
+    Sending data in UTF8 format
+
+    .PARAMETER DceUri
+    Here you can put in the DCE uri - typically found using Get-DceDcrDetails
+
+    .PARAMETER DcrImmutableId
+    Here you can put in the DCR ImmunetableId - typically found using Get-DceDcrDetails
+
+    .PARAMETER DcrStream
+    Here you can put in the DCR Stream name - typically found using Get-DceDcrDetails
+
+    .PARAMETER Data
+    This is the data array
+
+    .PARAMETER AzAppId
+    This is the Azure app id og an app with Contributor permissions in LogAnalytics + Resource Group for DCRs
+        
+    .PARAMETER AzAppSecret
+    This is the secret of the Azure app
+
+    .PARAMETER TenantId
+    This is the Azure AD tenant id
+
+    .INPUTS
+    None. You cannot pipe objects
+
+    .OUTPUTS
+    Output of REST PUT command. Should be 200 for success
+
+    .EXAMPLE
+    PS> Get-AzDcrDceDetails
+
+    .NOTES
+
+    .LINK
+    https://github.com/KnudsenMorten/AzLogDcrIngestPS
+#>
+
     [CmdletBinding()]
     param(
             [Parameter(mandatory)]
@@ -1312,19 +1800,51 @@ Function Post-AzLogAnalyticsLogIngestCustomLogDcrDce
               # return $result
         }
         Write-host ""
+
+    Export-ModuleMember -Function Post-AzLogAnalyticsLogIngestCustomLogDcrDce
 }
 
-#Function ValidateFix-AzLogAnalyticsTableSchemaColumnNames ($Data)
 
 Function ValidateFix-AzLogAnalyticsTableSchemaColumnNames
 {
+<#
+    .SYNOPSIS
+    Validates the column names in the schema are valid according the requirement for LogAnalytics tables
+    Fixes any issues by rebuild the source object
+
+    Developed by Morten Knudsen, Microsoft MVP
+
+    .DESCRIPTION
+    Checks for prohibited column names - and adds new column with <name>_ - and removes prohibited column name
+    Checks for column name length is under 45 characters
+    Checks for column names must not start with _ (underscore) - or contain " " (space) or . (period)
+    In case of issues, an new source object is build
+
+    .PARAMETER Data
+    This is the data array
+
+    .INPUTS
+    None. You cannot pipe objects
+
+    .OUTPUTS
+    Updated $DataVariable with valid column names
+
+    .EXAMPLE
+    PS> ValidateFix-AzLogAnalyticsTableSchemaColumnNames
+
+    .NOTES
+
+    .LINK
+    https://github.com/KnudsenMorten/AzLogDcrIngestPS
+#>
+
     [CmdletBinding()]
     param(
             [Parameter(mandatory)]
                 [Array]$Data
          )
 
-    $ProhibitedColumnNames = @("_ResourceId","id","_ResourceId","_SubscriptionId","TenantId","Type","UniqueId","Title")
+    $ProhibitedColumnNames = @("_ResourceId","id","_ResourceId","_SubscriptionId","TenantId","Type","UniqueId","Title","Date")
 
     Write-host "  Validating schema structure of source data ... Please Wait !"
 
@@ -1451,12 +1971,40 @@ Function ValidateFix-AzLogAnalyticsTableSchemaColumnNames
             Write-host "  SUCCESS - No issues found in schema structure"
         }
     Return $Data
+
+    Export-ModuleMember -Function Post-AzLogAnalyticsLogIngestCustomLogDcrDce
 }
 
-#Function Build-DataArrayToAlignWithSchema ($Data)
 
 Function Build-DataArrayToAlignWithSchema
 {
+<#
+    .SYNOPSIS
+    Rebuilds the source object to match modified schema structure - used after usage of ValidateFix-AzLogAnalyticsTableSchemaColumnNames
+
+    Developed by Morten Knudsen, Microsoft MVP
+
+    .DESCRIPTION
+    Builds new PSCustomObject object
+
+    .PARAMETER Data
+    This is the data array
+
+    .INPUTS
+    None. You cannot pipe objects
+
+    .OUTPUTS
+    Updated $DataVariable with valid column names
+
+    .EXAMPLE
+    PS> Build-DataArrayToAlignWithSchema
+
+    .NOTES
+
+    .LINK
+    https://github.com/KnudsenMorten/AzLogDcrIngestPS
+#>
+
     [CmdletBinding()]
     param(
             [Parameter(mandatory)]
@@ -1501,10 +2049,10 @@ Function Build-DataArrayToAlignWithSchema
                 $Data = $DataVariableQA
             }
         Return $Data
+
+    Export-ModuleMember -Function Post-AzLogAnalyticsLogIngestCustomLogDcrDce
 }
 
-
-# Function Get-AzDataCollectionRuleNamingConventionSrv ($TableName)
 
 Function Get-AzDataCollectionRuleNamingConventionSrv
 {
@@ -1521,7 +2069,6 @@ Function Get-AzDataCollectionRuleNamingConventionSrv
     Return $DcrName, $DceName
 }
 
-#Function Get-AzDataCollectionRuleNamingConventionClt ($TableName)
 Function Get-AzDataCollectionRuleNamingConventionClt
 {
     [CmdletBinding()]
@@ -1535,12 +2082,15 @@ Function Get-AzDataCollectionRuleNamingConventionClt
     $DceName    = $Global:AzDceNameClient
 
     Return $DcrName, $DceName
+
+    Export-ModuleMember -Function Post-AzLogAnalyticsLogIngestCustomLogDcrDce
+
 }
 
-#Function Get-AzLogAnalyticsTableAzDataCollectionRuleStatus ($AzLogWorkspaceResourceId, $TableName, $DcrName, $SchemaSourceObject, $AzAppId, $AzAppSecret, $TenantId)
 
 Function Get-AzLogAnalyticsTableAzDataCollectionRuleStatus
 {
+
     [CmdletBinding()]
     param(
             [Parameter(mandatory)]
@@ -2172,6 +2722,23 @@ Function CheckCreateUpdate-TableDcr-Structure
                 [string]$TenantId
          )
 
+    #----------------------------------
+    # TROUBLESHOOTING
+<#
+        $AzLogWorkspaceResourceId                   = $LogAnalyticsWorkspaceResourceId
+        $AzAppId                                    = $LogIngestAppId
+        $AzAppSecret                                = $LogIngestAppSecret
+        $TenantId                                   = $TenantId
+        $DceName                                    = $DceName
+        $DcrName                                    = $DcrName
+        $TableName                                  = $TableName
+        $Data                                       = $DataVariable
+        $LogIngestServicePricipleObjectId           = $AzDcrLogIngestServicePrincipalObjectId
+        $AzDcrSetLogIngestApiAppPermissionsDcrLevel = $AzDcrSetLogIngestApiAppPermissionsDcrLevel
+        $AzLogDcrTableCreateFromAnyMachine          = $AzLogDcrTableCreateFromAnyMachine
+        $AzLogDcrTableCreateFromReferenceMachine    = $AzLogDcrTableCreateFromReferenceMachine
+#>
+
     #-------------------------------------------------------------------------------------------
     # Create/Update Schema for LogAnalytics Table & Data Collection Rule schema
     #-------------------------------------------------------------------------------------------
@@ -2195,6 +2762,7 @@ Function CheckCreateUpdate-TableDcr-Structure
                         {
                             If ( ( $env:COMPUTERNAME -in $AzLogDcrTableCreateFromReferenceMachine) -or ($AzLogDcrTableCreateFromAnyMachine -eq $true) )    # manage table creations
                                 {
+                                    
                                     # build schema to be used for LogAnalytics Table
                                     $Schema = Get-ObjectSchemaAsHash -Data $Data -ReturnType Table
 
@@ -2203,7 +2771,7 @@ Function CheckCreateUpdate-TableDcr-Structure
 
 
                                     # build schema to be used for DCR
-                                    $Schema = Get-ObjectSchemaAsHash -Data $DataVariable -ReturnType DCR
+                                    $Schema = Get-ObjectSchemaAsHash -Data $Data -ReturnType DCR
 
                                     CreateUpdate-AzDataCollectionRuleLogIngestCustomLog -AzLogWorkspaceResourceId $AzLogWorkspaceResourceId -SchemaSourceObject $Schema `
                                                                                         -DceName $DceName -DcrName $DcrName -TableName $TableName `
@@ -2213,5 +2781,6 @@ Function CheckCreateUpdate-TableDcr-Structure
                                 }
                         }
                 } # create table/DCR
+
 }
 
