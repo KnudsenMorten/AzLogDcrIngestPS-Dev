@@ -2366,3 +2366,4 @@ Function CheckCreateUpdate-TableDcr-Structure ($Data, $AzLogWorkspaceResourceId,
                         }
                 } # create table/DCR
 }
+
