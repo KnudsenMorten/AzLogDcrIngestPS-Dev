@@ -15,7 +15,7 @@ Function Get-AzDcrDceDetails
     Here you can put in the DCE name you want to find
 
     .PARAMETER AzAppId
-    This is the Azure app id og an app with Contributor permissions in LogAnalytics + Resource Group for DCRs
+    This is the Azure app id
         
     .PARAMETER AzAppSecret
     This is the secret of the Azure app
@@ -27,10 +27,90 @@ Function Get-AzDcrDceDetails
     None. You cannot pipe objects
 
     .OUTPUTS
-    Output of REST PUT command. Should be 200 for success
+    Information about DCR/DCE
 
     .EXAMPLE
-    PS> Get-AzDcrDceDetails
+    $verbose                                         = $true
+
+    $TenantId                                        = "xxxxx" 
+    $LogIngestAppId                                  = "xxxxx" 
+    $LogIngestAppSecret                              = "xxxxx" 
+
+    $DceName                                         = "dce-log-platform-management-client-demo1-p" 
+    $LogAnalyticsWorkspaceResourceId                 = "/subscriptions/xxxxxx/resourceGroups/rg-logworkspaces/providers/Microsoft.OperationalInsights/workspaces/log-platform-management-client-demo1-p" 
+    $AzDcrPrefixClient                               = "clt1" 
+
+    $AzDcrSetLogIngestApiAppPermissionsDcrLevel      = $false
+    $AzDcrLogIngestServicePrincipalObjectId          = "xxxxxx" 
+
+    #-------------------------------------------------------------------------------------------
+    # Collecting data (in)
+    #-------------------------------------------------------------------------------------------
+            
+    Write-Output ""
+    Write-Output "Collecting OS information ... Please Wait !"
+
+    $DataVariable = Get-CimInstance -ClassName Win32_OperatingSystem
+
+    #-------------------------------------------------------------------------------------------
+    # Preparing data structure
+    #-------------------------------------------------------------------------------------------
+
+    # convert CIM array to PSCustomObject and remove CIM class information
+    $DataVariable = Convert-CimArrayToObjectFixStructure -data $DataVariable -Verbose:$Verbose
+    
+    # add CollectionTime to existing array
+    $DataVariable = Add-CollectionTimeToAllEntriesInArray -Data $DataVariable -Verbose:$Verbose
+
+    # add Computer & UserLoggedOn info to existing array
+    $DataVariable = Add-ColumnDataToAllEntriesInArray -Data $DataVariable -Column1Name Computer -Column1Data $Env:ComputerName  -Column2Name UserLoggedOn -Column2Data $UserLoggedOn
+
+    # Validating/fixing schema data structure of source data
+    $DataVariable = ValidateFix-AzLogAnalyticsTableSchemaColumnNames -Data $DataVariable -Verbose:$Verbose
+
+    # Aligning data structure with schema (requirement for DCR)
+    $DataVariable = Build-DataArrayToAlignWithSchema -Data $DataVariable -Verbose:$Verbose
+
+    # We change the tablename to something - for example add TEST (InvClientComputerOSInfoTESTV2) - table doesn't exist
+    $TableName = 'InvClientComputerOSInfoTESTV2'   # must not contain _CL
+    $DcrName   = "dcr-" + $AzDcrPrefixClient + "-" + $TableName + "_CL"
+
+    $Schema = Get-ObjectSchemaAsArray -Data $DataVariable
+    $StructureCheck = Get-AzLogAnalyticsTableAzDataCollectionRuleStatus -AzLogWorkspaceResourceId $LogAnalyticsWorkspaceResourceId -TableName $TableName -DcrName $DcrName -SchemaSourceObject $Schema `
+                                                                        -AzAppId $AzAppId -AzAppSecret $AzAppSecret -TenantId $TenantId -Verbose:$Verbose
+
+    # build schema to be used for DCR
+    $Schema = Get-ObjectSchemaAsHash -Data $DataVariable -ReturnType DCR
+
+    $StructureCheck = Get-AzLogAnalyticsTableAzDataCollectionRuleStatus -AzLogWorkspaceResourceId $LogAnalyticsWorkspaceResourceId -TableName $TableName -DcrName $DcrName -SchemaSourceObject $Schema `
+                                                                        -AzAppId $LogIngestAppId -AzAppSecret $LogIngestAppSecret -TenantId $TenantId -Verbose:$Verbose
+
+
+
+    $AzDcrDceDetails = Get-AzDcrDceDetails -DcrName $DcrName -DceName $DceName `
+                                            -AzAppId $LogIngestAppId -AzAppSecret $AzAppSecret -TenantId $TenantId -Verbose:$Verbose
+
+    # required information is returned in the stream as variables $AzDcrDceDetails[0], $AzDcrDceDetails[1], etc
+    $AzDcrDceDetails
+
+    #-------------------------------------------------------------------------------------------
+    # Output
+    #-------------------------------------------------------------------------------------------
+    /subscriptions/fce4f282-fcc6-43fb-94d8-bf1701b862c3/resourceGroups/rg-dce-log-platform-management-client-demo1-p/providers/Microsoft.Insig
+    hts/dataCollectionEndpoints/dce-log-platform-management-client-demo1-p
+    westeurope
+    https://dce-log-platform-management-client-demo1-p-c5hl.westeurope-1.ingest.monitor.azure.com
+    dce-7a8a2d176844444b9e89719b702dccec
+    /subscriptions/fce4f282-fcc6-43fb-94d8-bf1701b862c3/resourceGroups/rg-dcr-log-platform-management-client-demo1-p/providers/microsoft.insig
+    hts/dataCollectionRules/dcr-clt1-InvClientComputerOSInfoTESTV2_CL
+    westeurope
+    dcr-0189d991f81f43efbcfb6fc520541452
+    Custom-InvClientComputerOSInfoTESTV2_CL
+    log-platform-management-client-demo1-p
+    e74ca75a-c0e6-4933-a4f7-e5ae943fe4ac
+    /subscriptions/fce4f282-fcc6-43fb-94d8-bf1701b862c3/resourceGroups/rg-logworkspaces/providers/Microsoft.OperationalInsights/workspaces/log
+    -platform-management-client-demo1-p
+    source | extend TimeGenerated = now()
 
  #>
 
@@ -73,7 +153,7 @@ Function Get-AzDcrDceDetails
                                     Start-Sleep -s 10
 
                                     # building global variable with all DCEs, which can be viewed by Log Ingestion app
-                                    $global:AzDceDetails = Get-AzDceListAll -AzAppId $LogIngestAppId -AzAppSecret $LogIngestAppSecret -TenantId $TenantId -Verbose:$Verbose -Verbose:$Verbose
+                                    $global:AzDceDetails = Get-AzDceListAll -AzAppId $LogIngestAppId -AzAppSecret $LogIngestAppSecret -TenantId $TenantId -Verbose:$Verbose
     
                                     $DceInfo = $global:AzDceDetails | Where-Object { $_.name -eq $DceName }
                                        If (!($DceInfo))
@@ -130,7 +210,7 @@ Function Get-AzDcrDceDetails
                                     Start-Sleep -s 10
 
                                     # building global variable with all DCEs, which can be viewed by Log Ingestion app
-                                    $global:AzDcrDetails = Get-AzDcrListAll -AzAppId $LogIngestAppId -AzAppSecret $LogIngestAppSecret -TenantId $TenantId -Verbose:$Verbose -Verbose:$Verbose
+                                    $global:AzDcrDetails = Get-AzDcrListAll -AzAppId $LogIngestAppId -AzAppSecret $LogIngestAppSecret -TenantId $TenantId -Verbose:$Verbose
     
                                     $DcrInfo = $global:AzDceDetails | Where-Object { $_.name -eq $DcrName }
                                        If (!($DcInfo))
@@ -211,4 +291,3 @@ Function Get-AzDcrDceDetails
 
         return
 }
-

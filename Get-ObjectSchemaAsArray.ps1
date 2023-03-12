@@ -1,5 +1,144 @@
 Function Get-ObjectSchemaAsArray
 {
+  <#
+    .SYNOPSIS
+    Gets the schema of the object as array with column-names and their type (strin, boolean, dynamic, etc.)
+
+    .DESCRIPTION
+    Used to validate the data structure - and give insight of any potential data manipulation
+
+    .PARAMETER Data
+    Object to modify
+
+    .INPUTS
+    None. You cannot pipe objects
+
+    .OUTPUTS
+    Updated object with CollectionTime
+
+    .EXAMPLE
+    $verbose                                         = $true
+
+    $TenantId                                        = "xxxxx" 
+    $LogIngestAppId                                  = "xxxxx" 
+    $LogIngestAppSecret                              = "xxxxx" 
+
+    $TableName                                       = 'InvClientComputerOSInfoV2'   # must not contain _CL
+    $DcrName                                         = "dcr-" + $AzDcrPrefixClient + "-" + $TableName + "_CL"
+
+    $DceName                                         = "dce-log-platform-management-client-demo1-p" 
+    $LogAnalyticsWorkspaceResourceId                 = "/subscriptions/xxxxxx/resourceGroups/rg-logworkspaces/providers/Microsoft.OperationalInsights/workspaces/log-platform-management-client-demo1-p" 
+    $AzDcrPrefixClient                               = "clt1" 
+
+    $AzDcrSetLogIngestApiAppPermissionsDcrLevel      = $false
+    $AzDcrLogIngestServicePrincipalObjectId          = "xxxxxx" 
+
+    #-------------------------------------------------------------------------------------------
+    # Collecting data (in)
+    #-------------------------------------------------------------------------------------------
+            
+    Write-Output ""
+    Write-Output "Collecting OS information ... Please Wait !"
+
+    $DataVariable = Get-CimInstance -ClassName Win32_OperatingSystem
+
+    #-------------------------------------------------------------------------------------------
+    # Preparing data structure
+    #-------------------------------------------------------------------------------------------
+
+    # convert CIM array to PSCustomObject and remove CIM class information
+    $DataVariable = Convert-CimArrayToObjectFixStructure -data $DataVariable -Verbose:$Verbose
+    
+    # add CollectionTime to existing array
+    $DataVariable = Add-CollectionTimeToAllEntriesInArray -Data $DataVariable -Verbose:$Verbose
+
+    # add Computer & UserLoggedOn info to existing array
+    $DataVariable = Add-ColumnDataToAllEntriesInArray -Data $DataVariable -Column1Name Computer -Column1Data $Env:ComputerName  -Column2Name UserLoggedOn -Column2Data $UserLoggedOn
+
+    # Validating/fixing schema data structure of source data
+    $DataVariable = ValidateFix-AzLogAnalyticsTableSchemaColumnNames -Data $DataVariable -Verbose:$Verbose
+
+    # Aligning data structure with schema (requirement for DCR)
+    $DataVariable = Build-DataArrayToAlignWithSchema -Data $DataVariable -Verbose:$Verbose
+
+    $Schema = Get-ObjectSchemaAsArray -Data $DataVariable
+    $Schema
+
+    #-------------------------------------------------------------------------------------------
+    # Output
+    #-------------------------------------------------------------------------------------------
+    name                                      type    
+    ----                                      ----    
+    BootDevice                                string  
+    BuildNumber                               string  
+    BuildType                                 string  
+    Caption                                   string  
+    CodeSet                                   string  
+    CollectionTime                            datetime
+    Computer                                  string  
+    CountryCode                               string  
+    CreationClassName                         string  
+    CSCreationClassName                       string  
+    CSDVersion                                dynamic 
+    CSName                                    string  
+    CurrentTimeZone                           int     
+    DataExecutionPrevention_32BitApplications boolean 
+    DataExecutionPrevention_Available         boolean 
+    DataExecutionPrevention_Drivers           boolean 
+    DataExecutionPrevention_SupportPolicy     int     
+    Debug                                     boolean 
+    Description                               string  
+    Distributed                               boolean 
+    EncryptionLevel                           int     
+    ForegroundApplicationBoost                int     
+    FreePhysicalMemory                        int     
+    FreeSpaceInPagingFiles                    int     
+    FreeVirtualMemory                         int     
+    InstallDate                               datetime
+    LargeSystemCache                          dynamic 
+    LastBootUpTime                            datetime
+    LocalDateTime                             datetime
+    Locale                                    string  
+    Manufacturer                              string  
+    MaxNumberOfProcesses                      long    
+    MaxProcessMemorySize                      long    
+    MUILanguages                              dynamic 
+    Name                                      string  
+    NumberOfLicensedUsers                     int     
+    NumberOfProcesses                         int     
+    NumberOfUsers                             int     
+    OperatingSystemSKU                        int     
+    Organization                              dynamic 
+    OSArchitecture                            string  
+    OSLanguage                                int     
+    OSProductSuite                            int     
+    OSType                                    int     
+    OtherTypeDescription                      dynamic 
+    PAEEnabled                                dynamic 
+    PlusProductID                             dynamic 
+    PlusVersionNumber                         dynamic 
+    PortableOperatingSystem                   boolean 
+    Primary                                   boolean 
+    ProductType                               int     
+    PSComputerName                            dynamic 
+    RegisteredUser                            string  
+    SerialNumber                              string  
+    ServicePackMajorVersion                   int     
+    ServicePackMinorVersion                   int     
+    SizeStoredInPagingFiles                   int     
+    Status                                    string  
+    SuiteMask                                 int     
+    SystemDevice                              string  
+    SystemDirectory                           string  
+    SystemDrive                               string  
+    TotalSwapSpaceSize                        dynamic 
+    TotalVirtualMemorySize                    int     
+    TotalVisibleMemorySize                    int     
+    UserLoggedOn                              string  
+    Version                                   string  
+    WindowsDirectory                          string  
+
+  #>
 
     [CmdletBinding()]
     param(

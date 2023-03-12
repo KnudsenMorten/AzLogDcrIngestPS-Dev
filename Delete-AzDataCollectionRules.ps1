@@ -4,8 +4,6 @@ Function Delete-AzDataCollectionRules
     .SYNOPSIS
     Deletes the Azure Loganalytics defined in like-format, so you can fast clean-up for example after demo or testing
 
-    Developed by Morten Knudsen, Microsoft MVP
-
     .DESCRIPTION
     Used to delete many data collection rules in one task
 
@@ -31,7 +29,55 @@ Function Delete-AzDataCollectionRules
     Output of REST PUT command. Should be 200 for success
 
     .EXAMPLE
-    PS> Delete-AzDataCollectionRules -DcrNameLike *demo* will delete all DCRs with the word demo in it
+    $verbose                                         = $true
+    $TenantId                                        = "xxxxx" 
+    $LogIngestAppId                                  = "xxxxx" 
+    $LogIngestAppSecret                              = "xxxxx" 
+
+    # delete Azure LogAnalytics data collection rules - based on name - NOTE: tenant-wide (use with caution) - DcrNameLike can include wildcard like *demo*
+    Delete-AzDataCollectionRules -DcrNameLike "*test*" -Verbose:$true
+
+    # Output
+    VERBOSE: Sent top=1000 skip=0 skipToken=
+    VERBOSE: Received results: 69
+    Data Collection Rules deletions in scope:
+    dcr-clt1-InvClientComputerOSInfoTest3V2_CL
+    dcr-clt1-InvClientComputerOSInfoTest4V2_CL
+    dcr-clt1-InvClientComputerOSInfoTest5V2_CL
+    dcr-clt1-InvClientComputerOSInfoTESTV2_CL
+    Deleting Data Collection Rules [ dcr-clt1-InvClientComputerOSInfoTest3V2_CL ] ... Please Wait !
+
+
+    Headers    : {[Pragma, System.String[]], [Request-Context, System.String[]], [x-ms-correlation-request-id, System.String[]], [x-ms-client
+                 -request-id, System.String[]]...}
+    Version    : 1.1
+    StatusCode : 200
+    Method     : DELETE
+    Content    : 
+
+    Deleting Data Collection Rules [ dcr-clt1-InvClientComputerOSInfoTest4V2_CL ] ... Please Wait !
+    Headers    : {[Pragma, System.String[]], [Request-Context, System.String[]], [x-ms-correlation-request-id, System.String[]], [x-ms-client
+                 -request-id, System.String[]]...}
+    Version    : 1.1
+    StatusCode : 200
+    Method     : DELETE
+    Content    : 
+
+    Deleting Data Collection Rules [ dcr-clt1-InvClientComputerOSInfoTest5V2_CL ] ... Please Wait !
+    Headers    : {[Pragma, System.String[]], [Request-Context, System.String[]], [x-ms-correlation-request-id, System.String[]], [x-ms-client
+                 -request-id, System.String[]]...}
+    Version    : 1.1
+    StatusCode : 200
+    Method     : DELETE
+    Content    : 
+
+    Deleting Data Collection Rules [ dcr-clt1-InvClientComputerOSInfoTESTV2_CL ] ... Please Wait !
+    Headers    : {[Pragma, System.String[]], [Request-Context, System.String[]], [x-ms-correlation-request-id, System.String[]], [x-ms-client
+                 -request-id, System.String[]]...}
+    Version    : 1.1
+    StatusCode : 200
+    Method     : DELETE
+    Content    : 
  #>
 
     [CmdletBinding()]

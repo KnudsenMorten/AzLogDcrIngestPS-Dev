@@ -38,13 +38,99 @@ Function Post-AzLogAnalyticsLogIngestCustomLogDcrDce
     Output of REST PUT command. Should be 200 for success
 
     .EXAMPLE
-	$AzDcrDceDetails = Get-AzDcrDceDetails -DcrName $DcrName -DceName $DceName `
-										   -AzAppId $AzAppId -AzAppSecret $AzAppSecret -TenantId $TenantId -Verbose:$Verbose
+    $verbose                                         = $true
 
-	Post-AzLogAnalyticsLogIngestCustomLogDcrDce  -DceUri $AzDcrDceDetails[2] -DcrImmutableId $AzDcrDceDetails[6] -TableName $TableName `
-												 -DcrStream $AzDcrDceDetails[7] -Data $Data -BatchAmount $BatchAmount `
-												 -AzAppId $AzAppId -AzAppSecret $AzAppSecret -TenantId $TenantId -Verbose:$Verbose
+    $TenantId                                        = "xxxxx" 
+    $LogIngestAppId                                  = "xxxxx" 
+    $LogIngestAppSecret                              = "xxxxx" 
 
+    $TableName                                       = 'InvClientComputerOSInfoV2'   # must not contain _CL
+    $DcrName                                         = "dcr-" + $AzDcrPrefixClient + "-" + $TableName + "_CL"
+
+    $DceName                                         = "dce-log-platform-management-client-demo1-p" 
+    $LogAnalyticsWorkspaceResourceId                 = "/subscriptions/xxxxxx/resourceGroups/rg-logworkspaces/providers/Microsoft.OperationalInsights/workspaces/log-platform-management-client-demo1-p" 
+    $AzDcrPrefixClient                               = "clt1" 
+
+    $AzDcrSetLogIngestApiAppPermissionsDcrLevel      = $false
+    $AzDcrLogIngestServicePrincipalObjectId          = "xxxxxx" 
+
+    #-------------------------------------------------------------------------------------------
+    # Collecting data (in)
+    #-------------------------------------------------------------------------------------------
+            
+    Write-Output ""
+    Write-Output "Collecting OS information ... Please Wait !"
+
+    $DataVariable = Get-CimInstance -ClassName Win32_OperatingSystem
+
+    #-------------------------------------------------------------------------------------------
+    # Preparing data structure
+    #-------------------------------------------------------------------------------------------
+
+    # convert CIM array to PSCustomObject and remove CIM class information
+    $DataVariable = Convert-CimArrayToObjectFixStructure -data $DataVariable -Verbose:$Verbose
+    
+    # add CollectionTime to existing array
+    $DataVariable = Add-CollectionTimeToAllEntriesInArray -Data $DataVariable -Verbose:$Verbose
+
+    # add Computer & UserLoggedOn info to existing array
+    $DataVariable = Add-ColumnDataToAllEntriesInArray -Data $DataVariable -Column1Name Computer -Column1Data $Env:ComputerName  -Column2Name UserLoggedOn -Column2Data $UserLoggedOn
+
+    # Validating/fixing schema data structure of source data
+    $DataVariable = ValidateFix-AzLogAnalyticsTableSchemaColumnNames -Data $DataVariable -Verbose:$Verbose
+
+    # Aligning data structure with schema (requirement for DCR)
+    $DataVariable = Build-DataArrayToAlignWithSchema -Data $DataVariable -Verbose:$Verbose
+
+    # We change the tablename to something - for example add TEST (InvClientComputerOSInfoTESTV2) - table doesn't exist
+    $TableName = 'InvClientComputerOSInfoTESTV2'   # must not contain _CL
+    $DcrName   = "dcr-" + $AzDcrPrefixClient + "-" + $TableName + "_CL"
+
+    $Schema = Get-ObjectSchemaAsArray -Data $DataVariable
+    $StructureCheck = Get-AzLogAnalyticsTableAzDataCollectionRuleStatus -AzLogWorkspaceResourceId $LogAnalyticsWorkspaceResourceId -TableName $TableName -DcrName $DcrName -SchemaSourceObject $Schema `
+                                                                        -AzAppId $AzAppId -AzAppSecret $AzAppSecret -TenantId $TenantId -Verbose:$Verbose
+
+    # build schema to be used for DCR
+    $Schema = Get-ObjectSchemaAsHash -Data $DataVariable -ReturnType DCR
+
+    $StructureCheck = Get-AzLogAnalyticsTableAzDataCollectionRuleStatus -AzLogWorkspaceResourceId $LogAnalyticsWorkspaceResourceId -TableName $TableName -DcrName $DcrName -SchemaSourceObject $Schema `
+                                                                        -AzAppId $LogIngestAppId -AzAppSecret $LogIngestAppSecret -TenantId $TenantId -Verbose:$Verbose
+
+
+    # build schema to be used for LogAnalytics Table
+    $Schema = Get-ObjectSchemaAsHash -Data $DataVariable -ReturnType Table -Verbose:$Verbose
+
+    CreateUpdate-AzLogAnalyticsCustomLogTableDcr -AzLogWorkspaceResourceId $LogAnalyticsWorkspaceResourceId -SchemaSourceObject $Schema -TableName $TableName `
+                                                    -AzAppId $LogIngestAppId -AzAppSecret $LogIngestAppSecret -TenantId $TenantId -Verbose:$Verbose 
+
+    # build schema to be used for DCR
+    $Schema = Get-ObjectSchemaAsHash -Data $DataVariable -ReturnType DCR
+
+    CreateUpdate-AzDataCollectionRuleLogIngestCustomLog -AzLogWorkspaceResourceId $LogAnalyticsWorkspaceResourceId -SchemaSourceObject $Schema `
+                                                        -DceName $DceName -DcrName $DcrName -TableName $TableName `
+                                                        -LogIngestServicePricipleObjectId  $AzDcrLogIngestServicePrincipalObjectId `
+                                                        -AzDcrSetLogIngestApiAppPermissionsDcrLevel $AzDcrSetLogIngestApiAppPermissionsDcrLevel `
+                                                        -AzAppId $LogIngestAppId -AzAppSecret $LogIngestAppSecret -TenantId $TenantId -Verbose:$Verbose
+
+    # here we post the data
+    $AzDcrDceDetails = Get-AzDcrDceDetails -DcrName $DcrName -DceName $DceName `
+                                            -AzAppId $AzAppId -AzAppSecret $AzAppSecret -TenantId $TenantId -Verbose:$Verbose
+
+    Post-AzLogAnalyticsLogIngestCustomLogDcrDce  -DceUri $AzDcrDceDetails[2] -DcrImmutableId $AzDcrDceDetails[6] -TableName $TableName `
+                                                    -DcrStream $AzDcrDceDetails[7] -Data $DataVariable -BatchAmount $BatchAmount `
+                                                    -AzAppId $LogIngestAppId -AzAppSecret $LogIngestAppSecret -TenantId $TenantId -Verbose:$Verbose
+
+
+    #-------------------------------------------------------------------------------------------
+    # Preparing data structure
+    #-------------------------------------------------------------------------------------------
+    VERBOSE: POST with -1-byte payload
+    VERBOSE: received 1317-byte response of content type application/json; charset=utf-8
+
+      [ 1 / 1 ] - Posting data to Loganalytics table [ InvClientComputerOSInfoTESTV2_CL ] .... Please Wait !
+    VERBOSE: POST with -1-byte payload
+    VERBOSE: received -1-byte response of content type 
+      SUCCESS - data uploaded to LogAnalytics
  #>
 
     [CmdletBinding()]

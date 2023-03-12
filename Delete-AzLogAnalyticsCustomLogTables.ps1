@@ -29,7 +29,48 @@ Function Delete-AzLogAnalyticsCustomLogTables
     Output of REST PUT command. Should be 200 for success
 
     .EXAMPLE
-    PS> Delete-AzLogAnalyticsCustomLogTables -TableLike *demo* will delete all tables with the word demo in it
+    $verbose                                         = $true
+    $TenantId                                        = "xxxxx" 
+    $LogIngestAppId                                  = "xxxxx" 
+    $LogIngestAppSecret                              = "xxxxx" 
+
+    $LogAnalyticsWorkspaceResourceId                 = "/subscriptions/xxxxxx/resourceGroups/rg-logworkspaces/providers/Microsoft.OperationalInsights/workspaces/log-platform-management-client-demo1-p" 
+
+
+    # delete Azure LogAnalytics custom logs tables with name like - * can be used like *demo*
+    Delete-AzLogAnalyticsCustomLogTables -TableNameLike "*test*" -AzLogWorkspaceResourceId $LogAnalyticsWorkspaceResourceId -verbose:$verbose
+
+    # Output
+    Getting list of tables in 
+    /subscriptions/fce4f282-fcc6-43fb-94d8-bf1701b862c3/resourceGroups/rg-logworkspaces/providers/Microsoft.OperationalInsights/workspaces/log
+    -platform-management-client-demo1-p
+    VERBOSE: GET with 0-byte payload
+    VERBOSE: received 1562867-byte response of content type application/json; charset=utf-8
+    LogAnalytics Resource Id
+    /subscriptions/fce4f282-fcc6-43fb-94d8-bf1701b862c3/resourceGroups/rg-logworkspaces/providers/Microsoft.OperationalInsights/workspaces/log
+    -platform-management-client-demo1-p
+
+    Table deletions in scope:
+    InvClientComputerOSInfoTESTV2_CL
+    InvClientComputerOSInfoTest3V2_CL
+    InvClientComputerOSInfoTest4V2_CL
+    InvClientComputerOSInfoTest5V2_CL
+    Deleting LogAnalytics table [ InvClientComputerOSInfoTESTV2_CL ] ... Please Wait !
+    VERBOSE: DELETE with 0-byte payload
+    VERBOSE: received 0-byte response of content type 
+
+    Deleting LogAnalytics table [ InvClientComputerOSInfoTest3V2_CL ] ... Please Wait !
+    VERBOSE: DELETE with 0-byte payload
+    VERBOSE: received 0-byte response of content type 
+
+    Deleting LogAnalytics table [ InvClientComputerOSInfoTest4V2_CL ] ... Please Wait !
+    VERBOSE: DELETE with 0-byte payload
+    VERBOSE: received 0-byte response of content type 
+
+    Deleting LogAnalytics table [ InvClientComputerOSInfoTest5V2_CL ] ... Please Wait !
+    VERBOSE: DELETE with 0-byte payload
+    VERBOSE: received 0-byte response of content type 
+
  #>
 
     [CmdletBinding()]

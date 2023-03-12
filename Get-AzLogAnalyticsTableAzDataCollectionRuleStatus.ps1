@@ -5,7 +5,28 @@ Function Get-AzLogAnalyticsTableAzDataCollectionRuleStatus
     Get status about Azure Loganalytics tables and Data Collection Rule.
 
     .DESCRIPTION
-    Used to detect if table7DCR must be create/updated - or it is valid to send in data
+    Used to detect if table/DCR must be create/updated - or it is valid to send in data
+
+    .PARAMETER DcrName
+    Specifies the DCR name
+
+    .PARAMETER Tablename
+    Specifies the table name in LogAnalytics
+
+    .PARAMETER SchemaSourceObject
+    This is the schema in hash table format coming from the source object
+
+    .PARAMETER AzLogWorkspaceResourceId
+    This is the Loganaytics Resource Id
+
+    .PARAMETER AzAppId
+    This is the Azure app id
+        
+    .PARAMETER AzAppSecret
+    This is the secret of the Azure app
+
+    .PARAMETER TenantId
+    This is the Azure AD tenant id
 
     .PARAMETER Data
     This is the data array
@@ -18,9 +39,71 @@ Function Get-AzLogAnalyticsTableAzDataCollectionRuleStatus
 	FALSE means everything is ok including schema - next step is to post data
 	
     .EXAMPLE
-	$Schema = Get-ObjectSchemaAsArray -Data $Data
-	$StructureCheck = Get-AzLogAnalyticsTableAzDataCollectionRuleStatus -AzLogWorkspaceResourceId $AzLogWorkspaceResourceId -TableName $TableName -DcrName $DcrName -SchemaSourceObject $Schema `
-																		-AzAppId $AzAppId -AzAppSecret $AzAppSecret -TenantId $TenantId -Verbose:$Verbose
+    #-------------------------------------------------------------------------------------------
+    # Variables
+    #-------------------------------------------------------------------------------------------
+    $verbose                                         = $true
+    $TableName                                       = 'InvClientComputerOSInfoV2'   # must not contain _CL
+    $DcrName                                         = "dcr-" + $AzDcrPrefixClient + "-" + $TableName + "_CL"
+
+    $TenantId                                        = "xxxxx" 
+    $LogIngestAppId                                  = "xxxxx" 
+    $LogIngestAppSecret                              = "xxxxx" 
+
+    $DceName                                         = "dce-log-platform-management-client-demo1-p" 
+    $LogAnalyticsWorkspaceResourceId                 = "/subscriptions/xxxxxx/resourceGroups/rg-logworkspaces/providers/Microsoft.OperationalInsights/workspaces/log-platform-management-client-demo1-p" 
+    $AzDcrPrefixClient                               = "clt1" 
+
+    $TableName                                       = 'InvClientComputerOSInfoV2'   # must not contain _CL
+    $DcrName                                         = "dcr-" + $AzDcrPrefixClient + "-" + $TableName + "_CL"
+
+    #-------------------------------------------------------------------------------------------
+    # Collecting data (in)
+    #-------------------------------------------------------------------------------------------
+            
+    Write-Output ""
+    Write-Output "Collecting OS information ... Please Wait !"
+
+    $DataVariable = Get-CimInstance -ClassName Win32_OperatingSystem
+
+    #-------------------------------------------------------------------------------------------
+    # Preparing data structure
+    #-------------------------------------------------------------------------------------------
+
+    # convert CIM array to PSCustomObject and remove CIM class information
+    $DataVariable = Convert-CimArrayToObjectFixStructure -data $DataVariable -Verbose:$Verbose
+    
+    # add CollectionTime to existing array
+    $DataVariable = Add-CollectionTimeToAllEntriesInArray -Data $DataVariable -Verbose:$Verbose
+
+    # add Computer & UserLoggedOn info to existing array
+    $DataVariable = Add-ColumnDataToAllEntriesInArray -Data $DataVariable -Column1Name Computer -Column1Data $Env:ComputerName  -Column2Name UserLoggedOn -Column2Data $UserLoggedOn
+
+    # Validating/fixing schema data structure of source data
+    $DataVariable = ValidateFix-AzLogAnalyticsTableSchemaColumnNames -Data $DataVariable -Verbose:$Verbose
+
+    # Aligning data structure with schema (requirement for DCR)
+    $DataVariable = Build-DataArrayToAlignWithSchema -Data $DataVariable -Verbose:$Verbose
+
+    $Schema = Get-ObjectSchemaAsArray -Data $DataVariable
+    $StructureCheck = Get-AzLogAnalyticsTableAzDataCollectionRuleStatus -AzLogWorkspaceResourceId $LogAnalyticsWorkspaceResourceId -TableName $TableName -DcrName $DcrName -SchemaSourceObject $Schema `
+                                                                        -AzAppId $LogIngestAppId -AzAppSecret $LogIngestAppSecret -TenantId $TenantId -Verbose:$Verbose
+
+    $StructureCheck
+
+    #-------------------------------------------------------------------------------------------
+    # Output
+    #-------------------------------------------------------------------------------------------
+    VERBOSE:   Converting CIM array to Object & removing CIM class data in array .... please wait !
+    VERBOSE:   Adding CollectionTime to all entries in array .... please wait !
+    VERBOSE:   Validating schema structure of source data ... Please Wait !
+    VERBOSE:   SUCCESS - No issues found in schema structure
+    VERBOSE:   Aligning source object structure with schema ... Please Wait !
+    VERBOSE:   Checking LogAnalytics table and Data Collection Rule configuration .... Please Wait !
+    VERBOSE: GET with 0-byte payload
+    VERBOSE: received 7749-byte response of content type application/json; charset=utf-8
+    VERBOSE:   Success - Schema & DCR structure is OK
+    $False
  #>
 
     [CmdletBinding()]

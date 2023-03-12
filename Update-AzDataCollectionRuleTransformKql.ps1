@@ -29,8 +29,38 @@ Function Update-AzDataCollectionRuleTransformKql
     Output of REST PUT command. Should be 200 for success
 
     .EXAMPLE
-    PS> Update-AzDataCollectionRuleTransformKql -DcrResourceId $DcrRuleId -transformKql $transformKql `
-  											    -AzAppId $AzAppId -AzAppSecret $AzAppSecret -TenantId $TenantId -Verbose:$Verbose 
+    $Verbose = $true
+
+    # make a DCR Event Log collection of security events - can be done through Sentinel
+    $DcrResourceId = "/subscriptions/fce4f282-fcc6-43fb-94d8-bf1701b862c3/resourceGroups/rg-logworkspaces/providers/microsoft.insights/dataCollectionRules/dcr-ingest-exclude-security-eventid"
+
+    # Remove transformation - send all data through pipeline
+    $transformKql = "source"
+
+    Update-AzDataCollectionRuleTransformKql -DcrResourceId $DcrResourceId -transformKql $transformKql -Verbose:$Verbose
+
+    # Output
+    VERBOSE: GET with 0-byte payload
+    VERBOSE: received 1419-byte response of content type application/json; charset=utf-8
+    Updating transformKql for DCR
+    /subscriptions/fce4f282-fcc6-43fb-94d8-bf1701b862c3/resourceGroups/rg-logworkspaces/providers/microsoft.insights/dataCollectionRules/dcr-i
+    ngest-exclude-security-eventid
+    VERBOSE: PUT with -1-byte payload
+    VERBOSE: received 1419-byte response of content type application/json; charset=utf-8
+
+    # Add transformation to exclude event 8002, 5058, 4662, 4688
+    $transformKql = "source | where (EventID != 8002) and (EventID != 5058) and (EventID != 4662) and (EventID != 4688)"
+
+    Update-AzDataCollectionRuleTransformKql -DcrResourceId $DcrResourceId -transformKql $transformKql -Verbose:$true
+
+    # Output
+    VERBOSE: GET with 0-byte payload
+    VERBOSE: received 1511-byte response of content type application/json; charset=utf-8
+    Updating transformKql for DCR
+    /subscriptions/fce4f282-fcc6-43fb-94d8-bf1701b862c3/resourceGroups/rg-logworkspaces/providers/microsoft.insights/dataCollectionRules/dcr-i
+    ngest-exclude-security-eventid
+    VERBOSE: PUT with -1-byte payload
+    VERBOSE: received 1511-byte response of content type application/json; charset=utf-8
 	
 
  #>
@@ -94,5 +124,4 @@ Function Update-AzDataCollectionRuleTransformKql
         $DcrUri = "https://management.azure.com" + $DcrResourceId + "?api-version=2022-06-01"
         $DCR = Invoke-RestMethod -Uri $DcrUri -Method PUT -Body $DcrPayload -Headers $Headers
 
-    Export-ModuleMember -Function Update-AzDataCollectionRuleTransformKql
 }
