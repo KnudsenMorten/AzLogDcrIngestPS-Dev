@@ -5392,4 +5392,3 @@ Function ValidateFix-AzLogAnalyticsTableSchemaColumnNames
         }
     Return [array]$Data
 }
-Export-ModuleMember -Function * -Cmdlet *
