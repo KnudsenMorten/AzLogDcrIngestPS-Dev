@@ -202,9 +202,9 @@ Function Post-AzLogAnalyticsLogIngestCustomLogDcrDce
 
                         # calculate size of data (entries)
                         $TotalDataLines = ($Data | Measure-Object).count
-
+                        
                         # calculate number of entries to send during each transfer - log ingestion api limits to max 1 mb per transfer
-                        If ( ($TotalDataLines -gt 1) -and ($BatchAmount -eq $null) )
+                        If ( ($TotalDataLines -gt 1) -and (!($BatchAmount)) )
                             {
                                 $SizeDataSingleEntryJson  = (ConvertTo-Json -Depth 100 -InputObject @($Data[0]) -Compress).length
                                 $DataSendAmountDecimal    = (( 1mb - 300Kb) / $SizeDataSingleEntryJson)   # 500 Kb is overhead (my experience !)
