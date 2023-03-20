@@ -185,7 +185,7 @@ Function Post-AzLogAnalyticsLogIngestCustomLogDcrDce
                         $headers     = @{"Content-Type"="application/x-www-form-urlencoded"};
                         $uri         = "https://login.microsoftonline.com/$tenantId/oauth2/v2.0/token"
 
-                        $bearerToken = (Invoke-RestMethod -Uri $uri -Method "Post" -Body $bodytoken -Headers $headers).access_token
+                        $bearerToken = (invoke-restmethod -UseBasicParsing -Uri $uri -Method "Post" -Body $bodytoken -Headers $headers).access_token
 
                         $headers = @{
                                         "Authorization" = "Bearer $bearerToken";
@@ -258,7 +258,7 @@ Function Post-AzLogAnalyticsLogIngestCustomLogDcrDce
                                 # set encoding to UTF8
                                 $JSON = [System.Text.Encoding]::UTF8.GetBytes($JSON)
 
-                                $Result = Invoke-WebRequest -Uri $uri -Method POST -Body $JSON -Headers $headers -ErrorAction SilentlyContinue
+                                $Result = invoke-webrequest -UseBasicParsing -Uri $uri -Method POST -Body $JSON -Headers $headers -ErrorAction SilentlyContinue
                                 $StatusCode = $Result.StatusCode
 
                                 If ($StatusCode -eq "204")
