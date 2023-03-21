@@ -242,15 +242,12 @@ Function Post-AzLogAnalyticsLogIngestCustomLogDcrDce
 
                                 If ($DataSendRemaining -gt 1)    # batch
                                     {
-                                        write-Output ""
-                                    
                                         # we are showing as first record is 1, but actually is is in record 0 - but we change it for gui purpose
-                                        Write-Output "  [ $($indexLoopFrom + 1)..$($indexLoopTo + 1) / $($TotalDataLines) ] - Posting data to LogAnalytics table [ $($TableName)_CL ] .... Please Wait !"
+                                        Write-host "  [ $($indexLoopFrom + 1)..$($indexLoopTo + 1) / $($TotalDataLines) ] - Posting data to LogAnalytics table [ $($TableName)_CL ] .... Please Wait !"
                                     }
                                 ElseIf ($DataSendRemaining -eq 1)   # single record
                                     {
-                                        write-Output ""
-                                        Write-Output "  [ $($indexLoopFrom + 1) / $($TotalDataLines) ] - Posting data to LogAnalytics table [ $($TableName)_CL ] .... Please Wait !"
+                                        Write-host "  [ $($indexLoopFrom + 1) / $($TotalDataLines) ] - Posting data to LogAnalytics table [ $($TableName)_CL ] .... Please Wait !"
                                     }
 
                                 $uri = "$DceURI/dataCollectionRules/$DcrImmutableId/streams/$DcrStream"+"?api-version=2021-11-01-preview"
@@ -279,7 +276,7 @@ Function Post-AzLogAnalyticsLogIngestCustomLogDcrDce
 
                             }
                         Until ($IndexLoopTo -ge ($TotalDataLines - 1 ))
-              # return $result
+              return $Result
         }
             
             Write-host ""
