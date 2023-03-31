@@ -276,8 +276,10 @@ Function Post-AzLogAnalyticsLogIngestCustomLogDcrDce
 
                             }
                         Until ($IndexLoopTo -ge ($TotalDataLines - 1 ))
-              return $Result
-        }
+                    } #If ($DceURI -and $DcrImmutableId -and $DcrStream -and $Data)
+        
+            #return latest upload result
+            return $Result
             
             Write-host ""
         }
