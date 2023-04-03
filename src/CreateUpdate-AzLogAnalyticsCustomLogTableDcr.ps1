@@ -306,7 +306,7 @@ Function CreateUpdate-AzLogAnalyticsCustomLogTableDcr
                         }
                 }
 
-            If ($UpdateDCR -eq $true)
+            If ($UpdateTable -eq $true)
                 {            
                     # new table structure with added properties (merging)
                         $tableBodyPut   = @{
