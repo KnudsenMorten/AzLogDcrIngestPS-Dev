@@ -292,11 +292,13 @@ Function CheckCreateUpdate-TableDcr-Structure
                 [string]$DcrResourceGroup,
             [Parameter(mandatory)]
                 [string]$DceName,
-            [Parameter(mandatory)]
+            [Parameter()]
+                [AllowEmptyCollection()]
                 [string]$LogIngestServicePricipleObjectId,
-            [Parameter(mandatory)]
-                [boolean]$AzDcrSetLogIngestApiAppPermissionsDcrLevel,
-            [Parameter(mandatory)]
+            [Parameter()]
+                [AllowEmptyCollection()]
+                [boolean]$AzDcrSetLogIngestApiAppPermissionsDcrLevel = $false,
+            [Parameter()]
                 [boolean]$AzLogDcrTableCreateFromAnyMachine,
             [Parameter()]
                 [string]$SchemaMode = "Merge",     # Merge = Merge new properties into existing schema, Overwrite = use source object schema

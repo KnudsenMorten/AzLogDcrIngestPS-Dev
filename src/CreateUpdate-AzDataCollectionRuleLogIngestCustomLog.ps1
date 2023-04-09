@@ -242,9 +242,11 @@ Function CreateUpdate-AzDataCollectionRuleLogIngestCustomLog
                 [string]$DcrName,
             [Parameter(mandatory)]
                 [string]$TableName,
+            [Parameter()]
+                [AllowEmptyCollection()]
+                [boolean]$AzDcrSetLogIngestApiAppPermissionsDcrLevel = $false,
             [Parameter(mandatory)]
-                [boolean]$AzDcrSetLogIngestApiAppPermissionsDcrLevel,
-            [Parameter(mandatory)]
+                [AllowEmptyCollection()]
                 [string]$LogIngestServicePricipleObjectId,
             [Parameter()]
                 [string]$SchemaMode = "Merge",     # Merge = Merge new properties into existing schema, Overwrite = use source object schema
