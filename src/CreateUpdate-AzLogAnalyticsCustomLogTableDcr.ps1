@@ -281,7 +281,7 @@ Function CreateUpdate-AzLogAnalyticsCustomLogTableDcr
                     $PropertyFound = $false
                     ForEach ($Property in $SchemaArrayLogAnalyticsTableFormatHash)
                         {
-                            If ($Property.name -eq $PropertySource.name)
+                            If ( ($Property.name -eq $PropertySource.name) -and ($Property.type -eq $PropertySource.type) )
                                 {
                                     $PropertyFound = $true
                                 }
@@ -318,6 +318,15 @@ Function CreateUpdate-AzLogAnalyticsCustomLogTableDcr
                                                             }
                                            } | ConvertTo-Json -Depth 10
 
+                        $tableBodyPutFull   = @{
+                                                properties = @{
+                                                                schema = @{
+                                                                                name    = $Table
+                                                                                columns = @($SchemaSourceObject)
+                                                                            }
+                                                            }
+                                            } | ConvertTo-Json -Depth 10
+
                     # create/update table schema using REST
                     $TableUrl = "https://management.azure.com" + $AzLogWorkspaceResourceId + "/tables/$($Table)?api-version=2021-12-01-preview"
 
@@ -339,7 +348,7 @@ Function CreateUpdate-AzLogAnalyticsCustomLogTableDcr
                                 
                             Start-Sleep -Seconds 10
                                 
-                            invoke-webrequest -UseBasicParsing -Uri $TableUrl -Method PUT -Headers $Headers -Body $TablebodyPut
+                            invoke-webrequest -UseBasicParsing -Uri $TableUrl -Method PUT -Headers $Headers -Body $TablebodyPutFull
                         }
                 }
         }
