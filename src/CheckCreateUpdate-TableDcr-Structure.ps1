@@ -295,8 +295,7 @@ Function CheckCreateUpdate-TableDcr-Structure
             [Parameter()]
                 [AllowEmptyCollection()]
                 [string]$LogIngestServicePricipleObjectId,
-            [Parameter()]
-                [AllowEmptyCollection()]
+            [Parameter(mandatory)]
                 [boolean]$AzDcrSetLogIngestApiAppPermissionsDcrLevel = $false,
             [Parameter()]
                 [boolean]$AzLogDcrTableCreateFromAnyMachine,

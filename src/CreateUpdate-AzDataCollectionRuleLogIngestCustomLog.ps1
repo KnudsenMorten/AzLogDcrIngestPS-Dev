@@ -242,10 +242,9 @@ Function CreateUpdate-AzDataCollectionRuleLogIngestCustomLog
                 [string]$DcrName,
             [Parameter(mandatory)]
                 [string]$TableName,
-            [Parameter()]
-                [AllowEmptyCollection()]
-                [boolean]$AzDcrSetLogIngestApiAppPermissionsDcrLevel = $false,
             [Parameter(mandatory)]
+                [boolean]$AzDcrSetLogIngestApiAppPermissionsDcrLevel = $false,
+            [Parameter()]
                 [AllowEmptyCollection()]
                 [string]$LogIngestServicePricipleObjectId,
             [Parameter()]
