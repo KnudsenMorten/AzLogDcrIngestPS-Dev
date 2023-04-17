@@ -184,6 +184,7 @@ Function Get-AzLogAnalyticsTableAzDataCollectionRuleStatus
                                 If ($ChkSchema -eq $null)
                                     {
                                         Write-Verbose "  Schema mismatch - property missing or different type (name: $($Entry.name), type: $($Entry.type))"
+
                                         # Set flag to update schema
                                         $AzDcrDceTableCustomLogCreateUpdate = $true     # $True/$False - typically used when updates to schema detected
                                     }
@@ -202,6 +203,75 @@ Function Get-AzLogAnalyticsTableAzDataCollectionRuleStatus
                         Write-Verbose "  DCR was not found [ $($DcrName) ]"
                         # initial setup - force to auto-create structure
                         $AzDcrDceTableCustomLogCreateUpdate = $true     # $True/$False - typically used when updates to schema detected
+                    }
+
+        #--------------------------------------------------------------------------
+        # Compare DCR schema with Table schema
+        #--------------------------------------------------------------------------
+
+            # LogAnalytics table
+                $TableUrl = "https://management.azure.com" + $AzLogWorkspaceResourceId + "/tables/$($TableName)_CL?api-version=2021-12-01-preview"
+                $TableStatus = Try
+                                    {
+                                        invoke-restmethod -UseBasicParsing -Uri $TableUrl -Method GET -Headers $Headers
+                                    }
+                                Catch
+                                    {
+                                    }
+
+
+                If ($TableStatus)
+                    {
+                        $CurrentTableSchema  = $TableStatus.properties.schema.columns
+                        $FilteredTableSchema = $CurrentTableSchema | Where-Object {$_.name -ne "TimeGenerated" }   # this is a mandatory which only exist in LA, not DCR
+                        $TableSchemaPropertyAmount = ($FilteredTableSchema | Measure-Object).count
+                    }
+
+            
+            # DCR
+                If ($DcrInfo)
+                    {
+                        $StreamDeclaration = 'Custom-' + $TableName + '_CL'
+                        $CurrentDcrSchema = $DcrInfo.properties.streamDeclarations.$StreamDeclaration.columns
+                        $DcrSchemaPropertyAmount = ($CurrentDcrSchema | Measure-Object).count
+                    }
+
+           
+           # Compare amounts
+                If ($DcrSchemaPropertyAmount -lt $TableSchemaPropertyAmount)
+                    {
+                        Write-Verbose "  Schema mismatch - property missing in DCR"
+
+                        # Set flag to update schema
+                        $AzDcrDceTableCustomLogCreateUpdate = $true     # $True/$False - typically used when updates to schema detected
+                    }
+                Else
+                    {
+                        # start by building new schema hash, based on existing schema in LogAnalytics custom log table
+                            $SchemaArrayDCRFormatHash = @()
+                            $ChangesDetected = $false
+                            ForEach ($Property in $CurrentTableSchema)
+                                {
+                                    $Name = $Property.name
+                                    $Type = $Property.type
+
+                                    # Add all properties except TimeGenerated as it only exist in tables - not DCRs
+                                    If ($Name -ne "TimeGenerated")
+                                        {
+                                            $ChkDcrSchema = $CurrentDcrSchema | Where-Object { ($_.name -eq $Name) -and ($_.Type -eq $Type) }
+                                                If (!($ChkDcrSchema))
+                                                    {
+                                                        $ChangesDetected = $true
+                                                    }
+                                        }
+                                }
+
+                            If ($ChangesDetected -eq $true)
+                                {
+                                    Write-Verbose "  Schema mismatch - property missing or different type in DCR"
+                                    # Set flag to update schema
+                                    $AzDcrDceTableCustomLogCreateUpdate = $true     # $True/$False - typically used when updates to schema detected
+                                }
                     }
 
             If ($AzDcrDceTableCustomLogCreateUpdate -eq $false)

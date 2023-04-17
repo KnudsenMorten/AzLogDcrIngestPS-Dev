@@ -360,6 +360,7 @@ Function CreateUpdate-AzDataCollectionRuleLogIngestCustomLog
     #--------------------------------------------------------------------------
 
         $Uri = "https://management.azure.com" + "$DcrResourceId" + "?api-version=2022-06-01"
+        $Dcr = $null
         Try
             {
                 $Dcr = invoke-webrequest -UseBasicParsing -Uri $Uri -Method GET -Headers $Headers
@@ -606,7 +607,35 @@ Function CreateUpdate-AzDataCollectionRuleLogIngestCustomLog
                                 }
                         }
 
-                # enum $SchemaSourceObject - and check if it exists in $SchemaArrayLogAnalyticsTableFormatHash
+                # get current DCR schema
+                $DcrInfo = $global:AzDcrDetails | Where-Object { $_.name -eq $DcrName }
+
+                $StreamDeclaration = 'Custom-' + $TableName + '_CL'
+                $CurrentDcrSchema = $DcrInfo.properties.streamDeclarations.$StreamDeclaration.columns
+
+                # enum $CurrentDcrSchema - and check if it exists in $SchemaArrayDCRFormatHash (coming from LogAnalytics)
+                $UpdateDCR = $False
+                ForEach ($Property in $CurrentTableSchema)
+                    {
+                        $Name = $Property.name
+                        $Type = $Property.type
+
+                        # Skip if name = TimeGenerated as it only exist in tables - not DCRs
+                        If ($Name -ne "TimeGenerated")
+                            {
+                                $ChkDcrSchema = $CurrentDcrSchema | Where-Object { ($_.name -eq $Name) -and ($_.Type -eq $Type) }
+                                    If (!($ChkDcrSchema))
+                                        {
+                                            # DCR must be updated, changes was detected !
+                                            $UpdateDCR = $true
+                                        }
+                             }
+                    }
+
+
+<#
+
+                # enum $SchemaSourceObject - and check if it exists in $SchemaArrayDCRFormatHash
                 $UpdateDCR = $False
                 ForEach ($PropertySource in $SchemaSourceObject)
                     {
@@ -636,7 +665,7 @@ Function CreateUpdate-AzDataCollectionRuleLogIngestCustomLog
                                                               }
                             }
                     }
-
+#>
 
 
                     #--------------------------------------------------------------------------
@@ -699,3 +728,4 @@ Function CreateUpdate-AzDataCollectionRuleLogIngestCustomLog
 
             
 }
+
