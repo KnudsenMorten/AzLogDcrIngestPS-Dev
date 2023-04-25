@@ -623,7 +623,10 @@ Function CreateUpdate-AzDataCollectionRuleLogIngestCustomLog
                         # Skip if name = TimeGenerated as it only exist in tables - not DCRs
                         If ($Name -ne "TimeGenerated")
                             {
-                                $ChkDcrSchema = $CurrentDcrSchema | Where-Object { ($_.name -eq $Name) -and ($_.Type -eq $Type) }
+                                # 2023-04-25 - removed so script will only change schema if name is not found - not if property type is different (who wins?)
+                                # $ChkDcrSchema = $CurrentDcrSchema | Where-Object { ($_.name -eq $Name) -and ($_.Type -eq $Type) }
+
+                                $ChkDcrSchema = $CurrentDcrSchema | Where-Object { ($_.name -eq $Name) }
                                     If (!($ChkDcrSchema))
                                         {
                                             # DCR must be updated, changes was detected !
@@ -725,7 +728,4 @@ Function CreateUpdate-AzDataCollectionRuleLogIngestCustomLog
                                 invoke-webrequest -UseBasicParsing -Uri $Uri -Method PUT -Body $DcrPayload -Headers $Headers
                     }
             }
-
-            
 }
-

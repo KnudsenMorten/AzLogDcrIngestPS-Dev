@@ -179,11 +179,14 @@ Function Get-AzLogAnalyticsTableAzDataCollectionRuleStatus
 
                         ForEach ($Entry in $SchemaSourceObject)
                             {
-                                $ChkSchema = $CurrentTableSchema | Where-Object { ($_.name -eq $Entry.name) -and ($_.type -eq $Entry.type) }
+                                # 2023-04-25 - removed so script will only change schema if name is not found - not if property type is different (who wins?)
+                                # $ChkSchema = $CurrentTableSchema | Where-Object { ($_.name -eq $Entry.name) -and ($_.type -eq $Entry.type) }
+                                
+                                $ChkSchema = $CurrentTableSchema | Where-Object { ($_.name -eq $Entry.name) }
 
                                 If ($ChkSchema -eq $null)
                                     {
-                                        Write-Verbose "  Schema mismatch - property missing or different type (name: $($Entry.name), type: $($Entry.type))"
+                                        Write-Verbose "  Schema mismatch - property missing (name: $($Entry.name), type: $($Entry.type))"
 
                                         # Set flag to update schema
                                         $AzDcrDceTableCustomLogCreateUpdate = $true     # $True/$False - typically used when updates to schema detected
@@ -258,7 +261,10 @@ Function Get-AzLogAnalyticsTableAzDataCollectionRuleStatus
                                     # Add all properties except TimeGenerated as it only exist in tables - not DCRs
                                     If ($Name -ne "TimeGenerated")
                                         {
-                                            $ChkDcrSchema = $CurrentDcrSchema | Where-Object { ($_.name -eq $Name) -and ($_.Type -eq $Type) }
+                                            # 2023-04-25 - removed so script will only change schema if name is not found - not if property type is different (who wins?)
+                                            # $ChkDcrSchema = $CurrentDcrSchema | Where-Object { ($_.name -eq $Name) -and ($_.Type -eq $Type) }
+                                            
+                                            $ChkDcrSchema = $CurrentDcrSchema | Where-Object { ($_.name -eq $Name) }
                                                 If (!($ChkDcrSchema))
                                                     {
                                                         $ChangesDetected = $true
@@ -268,7 +274,7 @@ Function Get-AzLogAnalyticsTableAzDataCollectionRuleStatus
 
                             If ($ChangesDetected -eq $true)
                                 {
-                                    Write-Verbose "  Schema mismatch - property missing or different type in DCR"
+                                    Write-Verbose "  Schema mismatch - property missing in DCR"
                                     # Set flag to update schema
                                     $AzDcrDceTableCustomLogCreateUpdate = $true     # $True/$False - typically used when updates to schema detected
                                 }

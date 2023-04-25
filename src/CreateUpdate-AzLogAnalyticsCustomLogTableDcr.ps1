@@ -281,7 +281,11 @@ Function CreateUpdate-AzLogAnalyticsCustomLogTableDcr
                     $PropertyFound = $false
                     ForEach ($Property in $SchemaArrayLogAnalyticsTableFormatHash)
                         {
-                            If ( ($Property.name -eq $PropertySource.name) -and ($Property.type -eq $PropertySource.type) )
+
+                            # 2023-04-25 - removed so script will only change schema if name is not found - not if property type is different (who wins?)
+                            # If ( ($Property.name -eq $PropertySource.name) -and ($Property.type -eq $PropertySource.type) )
+                            
+                            If ($Property.name -eq $PropertySource.name)
                                 {
                                     $PropertyFound = $true
                                 }
