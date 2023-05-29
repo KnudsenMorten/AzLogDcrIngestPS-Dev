@@ -164,6 +164,7 @@ Function Get-AzLogAnalyticsTableAzDataCollectionRuleStatus
             If ($TableStatus)
                 {
                     $CurrentTableSchema = $TableStatus.properties.schema.columns
+                    $AzureTableSchema   = $TableStatus.properties.schema.standardColumns
 
                     # Checking number of objects in schema
                         $CurrentTableSchemaCount = $CurrentTableSchema.count
@@ -179,12 +180,10 @@ Function Get-AzLogAnalyticsTableAzDataCollectionRuleStatus
 
                         ForEach ($Entry in $SchemaSourceObject)
                             {
-                                # 2023-04-25 - removed so script will only change schema if name is not found - not if property type is different (who wins?)
-                                # $ChkSchema = $CurrentTableSchema | Where-Object { ($_.name -eq $Entry.name) -and ($_.type -eq $Entry.type) }
-                                
-                                $ChkSchema = $CurrentTableSchema | Where-Object { ($_.name -eq $Entry.name) }
+                                $ChkSchemaCurrent = $CurrentTableSchema | Where-Object { ($_.name -eq $Entry.name) }
+                                $ChkSchemaStd = $AzureTableSchema | Where-Object { ($_.name -eq $Entry.name) }
 
-                                If ($ChkSchema -eq $null)
+                                If ( ($ChkSchemaCurrent -eq $null) -and ($ChkSchemaStd -eq $null) )
                                     {
                                         Write-Verbose "  Schema mismatch - property missing (name: $($Entry.name), type: $($Entry.type))"
 

@@ -22,6 +22,10 @@ Function CreateUpdate-AzLogAnalyticsCustomLogTableDcr
     It will overwrite existing schema in DCR/table – based on source object schema
     This parameter can be useful for separate overflow work
 
+    SchemaMode = Migrate
+    It will create the DCR, based on the schema from the LogAnalytics v1 table schema
+    This parameter is used only as part of migration away from HTTP Data Collector API to Log Ingestion API
+
     .PARAMETER AzLogWorkspaceResourceId
     This is the Loganaytics Resource Id
 
@@ -160,7 +164,7 @@ Function CreateUpdate-AzLogAnalyticsCustomLogTableDcr
             [Parameter(mandatory)]
                 [string]$AzLogWorkspaceResourceId,
             [Parameter()]
-                [string]$SchemaMode = "Merge",     # Merge = Merge new properties into existing schema, Overwrite = use source object schema
+                [string]$SchemaMode = "Merge",     # Merge = Merge new properties into existing schema, Overwrite = use source object schema, Migrate = It will create the DCR, based on the schema from the LogAnalytics v1 table schema
             [Parameter()]
                 [string]$AzAppId,
             [Parameter()]
@@ -202,6 +206,7 @@ Function CreateUpdate-AzLogAnalyticsCustomLogTableDcr
         If ($TableStatus)
             {
                 $CurrentTableSchema = $TableStatus.properties.schema.columns
+                $AzureTableSchema   = $TableStatus.properties.schema.standardColumns
             }
 
     #--------------------------------------------------------------------------
@@ -266,11 +271,14 @@ Function CreateUpdate-AzLogAnalyticsCustomLogTableDcr
                         $Name = $Property.name
                         $Type = $Property.type
 
-                        $SchemaArrayLogAnalyticsTableFormatHash += @{
-                                                                      name        = $name
-                                                                      type        = $type
-                                                                      description = ""
-                                                                   }
+                        If ($Name -notin $AzureTableSchema.name)   # exclude standard columns, especially important with migrated from v1 as Computer, TimeGenerated, etc. exist
+                            {
+                                $SchemaArrayLogAnalyticsTableFormatHash += @{
+                                                                              name        = $name
+                                                                              type        = $type
+                                                                              description = ""
+                                                                           }
+                            }
                     }
 
 
@@ -278,35 +286,38 @@ Function CreateUpdate-AzLogAnalyticsCustomLogTableDcr
             $UpdateTable = $False
             ForEach ($PropertySource in $SchemaSourceObject)
                 {
-                    $PropertyFound = $false
-                    ForEach ($Property in $SchemaArrayLogAnalyticsTableFormatHash)
+                    If ($PropertySource.name -notin $AzureTableSchema.name)   # exclude standard columns, especially important with migrated from v1 as Computer, TimeGenerated, etc. exist
                         {
-
-                            # 2023-04-25 - removed so script will only change schema if name is not found - not if property type is different (who wins?)
-                            # If ( ($Property.name -eq $PropertySource.name) -and ($Property.type -eq $PropertySource.type) )
-                            
-                            If ($Property.name -eq $PropertySource.name)
+                            $PropertyFound = $false
+                            ForEach ($Property in $SchemaArrayLogAnalyticsTableFormatHash)
                                 {
-                                    $PropertyFound = $true
+
+                                    # 2023-04-25 - removed so script will only change schema if name is not found - not if property type is different (who wins?)
+                                    # If ( ($Property.name -eq $PropertySource.name) -and ($Property.type -eq $PropertySource.type) )
+                            
+                                    If ($Property.name -eq $PropertySource.name)
+                                        {
+                                            $PropertyFound = $true
+                                        }
+
                                 }
+                        
+                            If ($PropertyFound -eq $true)
+                                {
+                                    # Name already found ... skipping
+                                }
+                            Else
+                                {
+                                    # table must be updated, changes detected in merge-mode
+                                    $UpdateTable = $true
 
-                        }
-
-                    If ($PropertyFound -eq $true)
-                        {
-                            # Name already found ... skipping
-                        }
-                    Else
-                        {
-                            # table must be updated, changes detected in merge-mode
-                            $UpdateTable = $true
-
-                            Write-verbose "SchemaMode = Merge: Adding property $($PropertySource.name)"
-                            $SchemaArrayLogAnalyticsTableFormatHash += @{
-                                                                            name        = $PropertySource.name
-                                                                            type        = $PropertySource.type
-                                                                            description = ""
-                                                                        }
+                                    Write-verbose "SchemaMode = Merge: Adding property $($PropertySource.name)"
+                                    $SchemaArrayLogAnalyticsTableFormatHash += @{
+                                                                                    name        = $PropertySource.name
+                                                                                    type        = $PropertySource.type
+                                                                                    description = ""
+                                                                                }
+                                }
                         }
                 }
 
@@ -347,12 +358,14 @@ Function CreateUpdate-AzLogAnalyticsCustomLogTableDcr
 
                             Write-Verbose ""
                             Write-Verbose "Internal error 500 - recreating table"
-
                             invoke-webrequest -UseBasicParsing -Uri $TableUrl -Method DELETE -Headers $Headers
                                 
                             Start-Sleep -Seconds 10
-                                
-                            invoke-webrequest -UseBasicParsing -Uri $TableUrl -Method PUT -Headers $Headers -Body $TablebodyPutFull
+                            
+                            # Changed to create with merged structure    
+                            # invoke-webrequest -UseBasicParsing -Uri $TableUrl -Method PUT -Headers $Headers -Body $TablebodyPutFull
+                            
+                            invoke-webrequest -UseBasicParsing -Uri $TableUrl -Method PUT -Headers $Headers -Body $TablebodyPut
                         }
                 }
         }
