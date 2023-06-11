@@ -262,7 +262,7 @@ Function CreateUpdate-AzLogAnalyticsCustomLogTableDcr
     #-----------------------------------------------------------------------------------------------
     # SchemaMode = Merge - Merging new properties into existing schema
     #-----------------------------------------------------------------------------------------------
-    If ($SchemaMode -eq "Merge")
+    If ( ($SchemaMode -eq "Merge") -or ($SchemaMode -eq "Migrate") )
         {
             # start by building new schema hash, based on existing schema in LogAnalytics custom log table
                 $SchemaArrayLogAnalyticsTableFormatHash = @()

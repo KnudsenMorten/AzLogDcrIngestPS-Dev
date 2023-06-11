@@ -727,6 +727,7 @@ Function CreateUpdate-AzDataCollectionRuleLogIngestCustomLog
                 If ($TableStatus)
                     {
                         $CurrentTableSchema = $TableStatus.properties.schema.columns
+                        $AzureTableSchema   = $TableStatus.properties.schema.standardColumns
                     }
 
                 # start by building new schema hash, based on existing schema in LogAnalytics custom log table
@@ -745,6 +746,20 @@ Function CreateUpdate-AzDataCollectionRuleLogIngestCustomLog
                                                                   }
                                 }
                         }
+                
+                # Add specific Azure column-names, if found as standard Azure columns (migrated from v1)
+                $LAV1StandardColumns = @("Computer","RawData")
+                ForEach ($Column in $LAV1StandardColumns)
+                    {
+                        If ( ($Column -notin $SchemaArrayDCRFormatHash.name) -and ($Column -in $AzureTableSchema.name) )
+                            {
+                                    $SchemaArrayDCRFormatHash += @{
+                                                                    name        = $column
+                                                                    type        = "string"
+                                                                  }
+                            }
+                    }
+
 
                 #--------------------------------------------------------------------------
                 # build initial payload to create DCR for log ingest (api) to custom logs

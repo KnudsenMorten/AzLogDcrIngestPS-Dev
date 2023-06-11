@@ -170,11 +170,13 @@ Function Get-AzLogAnalyticsTableAzDataCollectionRuleStatus
                         $CurrentTableSchemaCount = $CurrentTableSchema.count
                         $SchemaSourceObjectCount = ($SchemaSourceObject.count) + 1  # add 1 because TimeGenerated will automatically be added
 
+<#
                         If ($SchemaSourceObjectCount -gt $CurrentTableSchemaCount)
                             {
                                Write-Verbose "  Schema mismatch - Schema source object contains more properties than defined in current schema"
                                $AzDcrDceTableCustomLogCreateUpdate = $true     # $True/$False - typically used when updates to schema detected
                             }
+#>
 
                     # Verify LogAnalytics table schema matches source object ($SchemaSourceObject) - otherwise set flag to update schema in LA/DCR
 
