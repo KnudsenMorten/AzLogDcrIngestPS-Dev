@@ -318,8 +318,47 @@ Function CheckCreateUpdate-TableDcr-Structure
     #-------------------------------------------------------------------------------------------
     # Create/Update Schema for LogAnalytics Table & Data Collection Rule schema
     #-------------------------------------------------------------------------------------------
+        # default
+        $IssuesFound = $false
 
-        If ($EnableUploadViaLogHub -eq $false)
+        # Check for prohibited table names
+        If ($TableName -like "_*")   # remove any leading underscores - column in DCR/LA must start with a character
+            {
+                $IssuesFound = $true
+                Write-Verbose ""
+                Write-Verbose "  ISSUE - Table name must start with character [ $($TableName) ]"
+                Write-Verbose ""
+            }
+        ElseIf ($TableName -like "*-*")   # includes - (hyphen)
+            {
+                $IssuesFound = $true
+                Write-Verbose ""
+                Write-Verbose "  ISSUE - Table name include - (hyphen) - must be removed [ $($TableName) ]"
+                Write-Verbose ""
+            }
+        ElseIf ($TableName -like "*:*")   # includes : (semicolon)
+            {
+                $IssuesFound = $true
+                Write-Verbose ""
+                Write-Verbose "  ISSUE - Table name include : (semicolon) - must be removed [ $($TableName) ]"
+                Write-Verbose ""
+            }
+        ElseIf ($TableName -like "*.*")   # includes . (period)
+            {
+                $IssuesFound = $true
+                Write-Verbose ""
+                Write-Verbose "  ISSUE - Table name include . (period) - must be removed [ $($TableName) ]"
+                Write-Verbose ""
+            }
+        ElseIf ($TableName -like "* *")   # includes whitespace " "
+            {
+                $IssuesFound = $true
+                Write-Verbose ""
+                Write-Verbose "  ISSUE - Table name include whitespace - must be removed [ $($TableName) ]"
+                Write-Verbose ""
+            }
+
+        If ( ($EnableUploadViaLogHub -eq $false) -and ($IssuesFound -eq $false) )
             {
                 If ( ($AzAppId) -and ($AzAppSecret) )
                     {
