@@ -90,8 +90,18 @@ Function Get-AzAccessTokenManagement
         }
     Else
         {
-            $AccessToken = Get-AzAccessToken -ResourceUrl https://management.azure.com/ -Verbose:$Verbose
-            $Token = $AccessToken.Token
+            function ConvertFrom-SecureStringToPlainText {
+                param (
+                    [System.Security.SecureString]$SecureString
+                )
+                $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecureString)
+                $PlainText = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+                [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR)
+                return $PlainText
+            }
+
+            $AccessToken = Get-AzAccessToken -ResourceUrl https://management.azure.com/ -AsSecureString -Verbose:$Verbose
+            $Token = ConvertFrom-SecureStringToPlainText $AccessToken.Token
 
             $Headers = @{
                             'Content-Type' = 'application/json'
